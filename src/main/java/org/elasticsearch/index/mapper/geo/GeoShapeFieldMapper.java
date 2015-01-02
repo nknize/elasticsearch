@@ -29,6 +29,7 @@ import org.apache.lucene.spatial.prefix.tree.GeohashPrefixTree;
 import org.apache.lucene.spatial.prefix.tree.QuadPrefixTree;
 import org.apache.lucene.spatial.prefix.tree.SpatialPrefixTree;
 import org.elasticsearch.ElasticsearchIllegalArgumentException;
+import org.elasticsearch.ElasticsearchParseException;
 import org.elasticsearch.common.Strings;
 import org.elasticsearch.common.geo.GeoUtils;
 import org.elasticsearch.common.geo.SpatialStrategy;
@@ -44,6 +45,11 @@ import org.elasticsearch.index.mapper.Mapper;
 import org.elasticsearch.index.mapper.MapperParsingException;
 import org.elasticsearch.index.mapper.ParseContext;
 import org.elasticsearch.index.mapper.core.AbstractFieldMapper;
+import org.osgeo.proj4j.CoordinateReferenceSystem;
+//import org.geotools.referencing.CRS;
+//import org.opengis.referencing.FactoryException;
+//import org.opengis.referencing.NoSuchAuthorityCodeException;
+//import org.opengis.referencing.crs.CoordinateReferenceSystem;
 
 import java.io.IOException;
 import java.util.Iterator;
@@ -81,6 +87,7 @@ public class GeoShapeFieldMapper extends AbstractFieldMapper<String> {
         public static final String TREE_PRESISION = "precision";
         public static final String DISTANCE_ERROR_PCT = "distance_error_pct";
         public static final String ORIENTATION = "orientation";
+        public static final String CRS = "crs";
         public static final String STRATEGY = "strategy";
     }
 
@@ -91,6 +98,7 @@ public class GeoShapeFieldMapper extends AbstractFieldMapper<String> {
         public static final int QUADTREE_LEVELS = GeoUtils.quadTreeLevelsForPrecision("50m");
         public static final double DISTANCE_ERROR_PCT = 0.025d;
         public static final Orientation ORIENTATION = Orientation.RIGHT;
+        public static final CoordinateReferenceSystem COORDINATE_REFERENCE_SYSTEM = ShapeBuilder.WGS84;
 
         public static final FieldType FIELD_TYPE = new FieldType();
 
@@ -112,6 +120,7 @@ public class GeoShapeFieldMapper extends AbstractFieldMapper<String> {
         private double precisionInMeters = -1;
         private double distanceErrorPct = Defaults.DISTANCE_ERROR_PCT;
         private Orientation orientation = Defaults.ORIENTATION;
+        private CoordinateReferenceSystem crs = Defaults.COORDINATE_REFERENCE_SYSTEM;
 
         private SpatialPrefixTree prefixTree;
 
@@ -149,6 +158,11 @@ public class GeoShapeFieldMapper extends AbstractFieldMapper<String> {
             return this;
         }
 
+        public Builder crs(CoordinateReferenceSystem crs) {
+            this.crs = crs;
+            return this;
+        }
+
         @Override
         public GeoShapeFieldMapper build(BuilderContext context) {
 
@@ -161,7 +175,7 @@ public class GeoShapeFieldMapper extends AbstractFieldMapper<String> {
                 throw new ElasticsearchIllegalArgumentException("Unknown prefix tree type [" + tree + "]");
             }
 
-            return new GeoShapeFieldMapper(names, prefixTree, strategyName, distanceErrorPct, orientation, fieldType, postingsProvider,
+            return new GeoShapeFieldMapper(names, prefixTree, strategyName, distanceErrorPct, orientation, crs, fieldType, postingsProvider,
                     docValuesProvider, multiFieldsBuilder.build(this, context), copyTo);
         }
     }
@@ -200,6 +214,10 @@ public class GeoShapeFieldMapper extends AbstractFieldMapper<String> {
                 } else if (Names.ORIENTATION.equals(fieldName)) {
                     builder.orientation(ShapeBuilder.orientationFromString(fieldNode.toString()));
                     iterator.remove();
+                } else if (Names.CRS.equals(fieldName)) {
+                    Map<String, Object> fieldNodeMap = (Map<String, Object>) fieldNode;
+                    builder.crs(parseCRSMapping(fieldNodeMap));
+                    iterator.remove();
                 } else if (Names.STRATEGY.equals(fieldName)) {
                     builder.strategy(fieldNode.toString());
                     iterator.remove();
@@ -207,16 +225,48 @@ public class GeoShapeFieldMapper extends AbstractFieldMapper<String> {
             }
             return builder;
         }
+
+        public CoordinateReferenceSystem parseCRSMapping(Map<String, Object> mapping) {
+            Iterator<Map.Entry<String, Object>> iterator = mapping.entrySet().iterator();
+            // parse DocumentMapper
+            while (iterator.hasNext()) {
+                Map.Entry<String, Object> entry = iterator.next();
+                String fieldName = Strings.toUnderscoreCase(entry.getKey());
+                Object fieldNode = entry.getValue();
+
+                if ("type".equals(fieldName)) {
+                    iterator.remove();
+                    Map.Entry<String, Object> props = iterator.next();
+                    if (!"properties".equals(Strings.toUnderscoreCase(props.getKey()))) {
+                        throw new ElasticsearchParseException("found <" + props.getKey() + "> when expecting <properties> field");
+                    } else {
+                        String propStr = props.getValue().toString();
+                        switch (fieldNode.toString()) {
+                            case "name":
+                                return /*CRS.decode(propStr);*/ ShapeBuilder.createCRSfromName(propStr);
+                            case "link":
+                                return ShapeBuilder.createCRSfromLink(propStr);
+                            default:
+                                throw new IllegalArgumentException("no such crs type [" + fieldNode + "]");
+                        }
+                    }
+                } else {
+                    throw new ElasticsearchParseException("found <" + fieldName + "> when expecting <type> field");
+                }
+            }
+            return ShapeBuilder.WGS84;
+        }
     }
 
     private final PrefixTreeStrategy defaultStrategy;
     private final RecursivePrefixTreeStrategy recursiveStrategy;
     private final TermQueryPrefixTreeStrategy termStrategy;
     private Orientation shapeOrientation;
+    private CoordinateReferenceSystem crs;
 
     public GeoShapeFieldMapper(FieldMapper.Names names, SpatialPrefixTree tree, String defaultStrategyName, double distanceErrorPct,
-                               Orientation shapeOrientation, FieldType fieldType, PostingsFormatProvider postingsProvider,
-                               DocValuesFormatProvider docValuesProvider, MultiFields multiFields, CopyTo copyTo) {
+                               Orientation shapeOrientation, CoordinateReferenceSystem crs, FieldType fieldType, PostingsFormatProvider
+            postingsProvider, DocValuesFormatProvider docValuesProvider, MultiFields multiFields, CopyTo copyTo) {
         super(names, 1, fieldType, null, null, null, postingsProvider, docValuesProvider, null, null, null, null, multiFields, copyTo);
         this.recursiveStrategy = new RecursivePrefixTreeStrategy(tree, names.indexName());
         this.recursiveStrategy.setDistErrPct(distanceErrorPct);
@@ -224,6 +274,7 @@ public class GeoShapeFieldMapper extends AbstractFieldMapper<String> {
         this.termStrategy.setDistErrPct(distanceErrorPct);
         this.defaultStrategy = resolveStrategy(defaultStrategyName);
         this.shapeOrientation = shapeOrientation;
+        this.crs = crs;
     }
 
     @Override
@@ -319,6 +370,8 @@ public class GeoShapeFieldMapper extends AbstractFieldMapper<String> {
     }
 
     public Orientation orientation() { return this.shapeOrientation; }
+
+    public CoordinateReferenceSystem crs() { return this.crs; }
 
     public PrefixTreeStrategy resolveStrategy(String strategyName) {
         if (SpatialStrategy.RECURSIVE.getStrategyName().equals(strategyName)) {

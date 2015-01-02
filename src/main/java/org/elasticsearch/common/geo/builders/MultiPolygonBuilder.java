@@ -28,6 +28,7 @@ import org.elasticsearch.common.xcontent.XContentBuilder;
 
 import com.spatial4j.core.shape.Shape;
 import com.vividsolutions.jts.geom.Coordinate;
+import org.osgeo.proj4j.CoordinateReferenceSystem;
 
 public class MultiPolygonBuilder extends ShapeBuilder {
 
@@ -36,11 +37,11 @@ public class MultiPolygonBuilder extends ShapeBuilder {
     protected final ArrayList<BasePolygonBuilder<?>> polygons = new ArrayList<>();
 
     public MultiPolygonBuilder() {
-        this(Orientation.RIGHT);
+        this(Orientation.RIGHT, WGS84);
     }
 
-    public MultiPolygonBuilder(Orientation orientation) {
-        super(orientation);
+    public MultiPolygonBuilder(Orientation orientation, CoordinateReferenceSystem crs) {
+        super(orientation, crs);
     }
 
     public MultiPolygonBuilder polygon(BasePolygonBuilder<?> polygon) {
@@ -49,11 +50,11 @@ public class MultiPolygonBuilder extends ShapeBuilder {
     }
 
     public InternalPolygonBuilder polygon() {
-        return polygon(Orientation.RIGHT);
+        return polygon(Orientation.RIGHT, WGS84);
     }
 
-    public InternalPolygonBuilder polygon(Orientation orientation) {
-        InternalPolygonBuilder polygon = new InternalPolygonBuilder(this, orientation);
+    public InternalPolygonBuilder polygon(Orientation orientation, CoordinateReferenceSystem crs) {
+        InternalPolygonBuilder polygon = new InternalPolygonBuilder(this, orientation, crs);
         this.polygon(polygon);
         return polygon;
     }
@@ -104,10 +105,10 @@ public class MultiPolygonBuilder extends ShapeBuilder {
 
         private final MultiPolygonBuilder collection;
 
-        private InternalPolygonBuilder(MultiPolygonBuilder collection, Orientation orientation) {
-            super(orientation);
+        private InternalPolygonBuilder(MultiPolygonBuilder collection, Orientation orientation, CoordinateReferenceSystem crs) {
+            super(orientation, crs);
             this.collection = collection;
-            this.shell = new Ring<>(this);
+            this.shell = new Ring<>(this, crs);
         }
 
         @Override

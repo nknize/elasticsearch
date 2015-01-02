@@ -19,6 +19,7 @@
 
 package org.elasticsearch.common.geo.builders;
 
+import com.google.common.collect.Sets;
 import com.spatial4j.core.context.jts.JtsSpatialContext;
 import com.spatial4j.core.shape.Shape;
 import com.spatial4j.core.shape.jts.JtsGeometry;
@@ -37,6 +38,11 @@ import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.common.xcontent.XContentParser;
 import org.elasticsearch.common.xcontent.json.JsonXContent;
 import org.elasticsearch.index.mapper.geo.GeoShapeFieldMapper;
+import org.osgeo.proj4j.CRSFactory;
+import org.osgeo.proj4j.CoordinateReferenceSystem;
+import org.osgeo.proj4j.CoordinateTransform;
+import org.osgeo.proj4j.CoordinateTransformFactory;
+import org.osgeo.proj4j.ProjCoordinate;
 
 import java.io.IOException;
 import java.util.*;
@@ -61,6 +67,14 @@ public abstract class ShapeBuilder implements ToXContent {
     // TODO how might we use JtsSpatialContextFactory to configure the context (esp. for non-geo)?
     public static final JtsSpatialContext SPATIAL_CONTEXT = JtsSpatialContext.GEO;
     public static final GeometryFactory FACTORY = SPATIAL_CONTEXT.getGeometryFactory();
+    public static final CRSFactory CRS_FACTORY = new CRSFactory();
+    protected static final CoordinateTransformFactory TRANSFORM_FACTORY = new CoordinateTransformFactory();
+
+    /** base WGS84 projection parameters */
+    protected static final String WGS84_PARAM = "+title=long/lat:WGS84 +proj=longlat +datum=WGS84 +units=degrees";
+    public static final CoordinateReferenceSystem WGS84 = CRS.CRS84.crs;
+
+    protected static final Set<String> PROJ_AUTHORITIES = Sets.newHashSet("EPSG", "ESRI", "NAD27", "NAD83", "WORLD", "OGC");
 
     /** We're expecting some geometries might cross the dateline. */
     protected final boolean wrapdateline = SPATIAL_CONTEXT.isGeo();
@@ -75,16 +89,31 @@ public abstract class ShapeBuilder implements ToXContent {
     protected final boolean autoIndexJtsGeometry = true;//may want to turn off once SpatialStrategy impls do it.
 
     protected Orientation orientation = Orientation.RIGHT;
+    protected CoordinateReferenceSystem crs = WGS84;
 
     protected ShapeBuilder() {
 
     }
 
-    protected ShapeBuilder(Orientation orientation) {
+    protected ShapeBuilder(Orientation orientation, CoordinateReferenceSystem crs) {
         this.orientation = orientation;
+        this.crs = crs;
     }
 
-    protected static Coordinate coordinate(double longitude, double latitude) {
+    protected static Coordinate coordinate(Coordinate coord, CoordinateReferenceSystem srcCRS, CoordinateReferenceSystem tgtCRS) {
+        ProjCoordinate pout = reproject(coord.x, coord.y, srcCRS, tgtCRS);
+        coord.setOrdinate(Coordinate.X, pout.x);
+        coord.setOrdinate(Coordinate.Y, pout.y);
+        coord.setOrdinate(Coordinate.Z, pout.z);
+        return coord;
+    }
+
+    protected static Coordinate coordinate(double longitude, double latitude, CoordinateReferenceSystem crs) {
+        // project from given crs to WGS84
+        if (crs != WGS84) {
+            ProjCoordinate pout = reproject(longitude, latitude, crs, WGS84);
+            return new Coordinate(pout.x, pout.y);
+        }
         return new Coordinate(longitude, latitude);
     }
 
@@ -100,13 +129,24 @@ public abstract class ShapeBuilder implements ToXContent {
 
     /**
      * Create a new point
-     * 
+     *
      * @param longitude longitude of the point
      * @param latitude latitude of the point
      * @return a new {@link PointBuilder}
      */
     public static PointBuilder newPoint(double longitude, double latitude) {
-        return newPoint(new Coordinate(longitude, latitude));
+        return newPoint(new Coordinate(longitude, latitude), WGS84);
+    }
+
+    /**
+     * Create a new point
+     * 
+     * @param longitude longitude of the point
+     * @param latitude latitude of the point
+     * @return a new {@link PointBuilder}
+     */
+    public static PointBuilder newPoint(double longitude, double latitude, CoordinateReferenceSystem crs) {
+        return newPoint(new Coordinate(longitude, latitude), crs);
     }
 
     /**
@@ -114,8 +154,8 @@ public abstract class ShapeBuilder implements ToXContent {
      * @param coordinate coordinate defining the position of the point
      * @return a new {@link PointBuilder}
      */
-    public static PointBuilder newPoint(Coordinate coordinate) {
-        return new PointBuilder().coordinate(coordinate);
+    public static PointBuilder newPoint(Coordinate coordinate, CoordinateReferenceSystem crs) {
+        return new PointBuilder().coordinate(coordinate, crs);
     }
 
     /**
@@ -123,7 +163,15 @@ public abstract class ShapeBuilder implements ToXContent {
      * @return new {@link MultiPointBuilder}
      */
     public static MultiPointBuilder newMultiPoint() {
-        return new MultiPointBuilder();
+        return new MultiPointBuilder(WGS84);
+    }
+
+    /**
+     * Create a new set of points
+     * @return new {@link MultiPointBuilder}
+     */
+    public static MultiPointBuilder newMultiPoint(CoordinateReferenceSystem crs) {
+        return new MultiPointBuilder(crs);
     }
 
     /**
@@ -131,7 +179,15 @@ public abstract class ShapeBuilder implements ToXContent {
      * @return a new {@link LineStringBuilder}
      */
     public static LineStringBuilder newLineString() {
-        return new LineStringBuilder();
+        return new LineStringBuilder(WGS84);
+    }
+
+    /**
+     * Create a new lineString
+     * @return a new {@link LineStringBuilder}
+     */
+    public static LineStringBuilder newLineString(CoordinateReferenceSystem crs) {
+        return new LineStringBuilder(crs);
     }
 
     /**
@@ -139,7 +195,15 @@ public abstract class ShapeBuilder implements ToXContent {
      * @return a new {@link MultiLineStringBuilder}
      */
     public static MultiLineStringBuilder newMultiLinestring() {
-        return new MultiLineStringBuilder();
+        return new MultiLineStringBuilder(WGS84);
+    }
+
+    /**
+     * Create a new Collection of lineStrings
+     * @return a new {@link MultiLineStringBuilder}
+     */
+    public static MultiLineStringBuilder newMultiLinestring(CoordinateReferenceSystem crs) {
+        return new MultiLineStringBuilder(crs);
     }
 
     /**
@@ -154,8 +218,8 @@ public abstract class ShapeBuilder implements ToXContent {
      * Create a new Polygon
      * @return a new {@link PointBuilder}
      */
-    public static PolygonBuilder newPolygon(Orientation orientation) {
-        return new PolygonBuilder(orientation);
+    public static PolygonBuilder newPolygon(Orientation orientation, CoordinateReferenceSystem crs) {
+        return new PolygonBuilder(orientation, crs);
     }
 
     /**
@@ -170,8 +234,8 @@ public abstract class ShapeBuilder implements ToXContent {
      * Create a new Collection of polygons
      * @return a new {@link MultiPolygonBuilder}
      */
-    public static MultiPolygonBuilder newMultiPolygon(Orientation orientation) {
-        return new MultiPolygonBuilder(orientation);
+    public static MultiPolygonBuilder newMultiPolygon(Orientation orientation, CoordinateReferenceSystem crs) {
+        return new MultiPolygonBuilder(orientation, crs);
     }
 
     /**
@@ -186,8 +250,8 @@ public abstract class ShapeBuilder implements ToXContent {
      * Create a new GeometryCollection
      * @return a new {@link GeometryCollectionBuilder}
      */
-    public static GeometryCollectionBuilder newGeometryCollection(Orientation orientation) {
-        return new GeometryCollectionBuilder(orientation);
+    public static GeometryCollectionBuilder newGeometryCollection(Orientation orientation, CoordinateReferenceSystem crs) {
+        return new GeometryCollectionBuilder(orientation, crs);
     }
 
     /**
@@ -208,7 +272,9 @@ public abstract class ShapeBuilder implements ToXContent {
      * create a new rectangle
      * @return a new {@link EnvelopeBuilder}
      */
-    public static EnvelopeBuilder newEnvelope(Orientation orientation) { return new EnvelopeBuilder(orientation); }
+    public static EnvelopeBuilder newEnvelope(Orientation orientation, CoordinateReferenceSystem crs) {
+        return new EnvelopeBuilder(orientation, crs);
+    }
 
     @Override
     public String toString() {
@@ -239,7 +305,7 @@ public abstract class ShapeBuilder implements ToXContent {
      *             Thrown if an error occurs while reading from the
      *             XContentParser
      */
-    private static CoordinateNode parseCoordinates(XContentParser parser) throws IOException {
+    private static CoordinateNode parseCoordinates(XContentParser parser, CoordinateReferenceSystem crs) throws IOException {
         XContentParser.Token token = parser.nextToken();
 
         // Base cases
@@ -257,7 +323,7 @@ public abstract class ShapeBuilder implements ToXContent {
 
         List<CoordinateNode> nodes = new ArrayList<>();
         while (token != XContentParser.Token.END_ARRAY) {
-            nodes.add(parseCoordinates(parser));
+            nodes.add(parseCoordinates(parser, crs));
             token = parser.nextToken();
         }
 
@@ -293,6 +359,23 @@ public abstract class ShapeBuilder implements ToXContent {
         return builder.startArray().value(coordinate.x).value(coordinate.y).endArray();
     }
 
+    public static CoordinateReferenceSystem createCRSfromName(String crsSpec) {
+        CoordinateReferenceSystem crs = null;
+        // test if name is a PROJ4 spec
+        if (crsSpec.indexOf("+") >= 0 || crsSpec.indexOf("=") >= 0) {
+            crs = CRS_FACTORY.createFromParameters("Anon", crsSpec);
+        }
+        else {
+            crs = CRS_FACTORY.createFromName(crsSpec);
+        }
+        return crs;
+    }
+
+    public static CoordinateReferenceSystem createCRSfromLink(String crsStr) {
+        // TODO support projection definitions by way of links
+        return null;
+    }
+
     public static Orientation orientationFromString(String orientation) {
         orientation = orientation.toLowerCase(Locale.ROOT);
         switch (orientation) {
@@ -307,6 +390,15 @@ public abstract class ShapeBuilder implements ToXContent {
             default:
                 throw new IllegalArgumentException("Unknown orientation [" + orientation + "]");
         }
+    }
+
+    protected static ProjCoordinate reproject(double lon, double lat, CoordinateReferenceSystem srcCRS,
+                                              CoordinateReferenceSystem tgtCRS) {
+        // reproject from given crs to WGS84
+        CoordinateTransform trans = TRANSFORM_FACTORY.createTransform(srcCRS, tgtCRS);
+        ProjCoordinate pout = new ProjCoordinate();
+        trans.transform(new ProjCoordinate(lon, lat), pout);
+        return pout;
     }
 
     protected static Coordinate shift(Coordinate coordinate, double dateline) {
@@ -391,6 +483,7 @@ public abstract class ShapeBuilder implements ToXContent {
 
         protected final Coordinate coordinate;
         protected final List<CoordinateNode> children;
+        protected CoordinateReferenceSystem crs = null;
 
         /**
          * Creates a new leaf CoordinateNode
@@ -639,6 +732,100 @@ public abstract class ShapeBuilder implements ToXContent {
 
     }
 
+    public static final class CRSBuilder {
+        public static CoordinateReferenceSystem parseCRS(XContentParser parser) throws IOException {
+            if (parser.currentToken() != XContentParser.Token.START_OBJECT) {
+                throw new ElasticsearchParseException("crs must be an object");
+            }
+
+            XContentParser.Token token;
+            String crsType = null;
+            CoordinateReferenceSystem crs = WGS84;
+            while ((token = parser.nextToken()) != XContentParser.Token.END_OBJECT) {
+                if (token == XContentParser.Token.FIELD_NAME) {
+                    String fieldName = parser.currentName();
+                    if (FIELD_TYPE.equals(fieldName)) {
+                        parser.nextToken();
+                        crsType = parser.text();
+                        if (!crsType.equals("name") && !crsType.equals("link")) {
+                            throw new ElasticsearchParseException("no crs type [" + crsType + "] Expected one of 'name' or 'link'");
+                        }
+                    } else if (FIELD_PROPERTIES.equals(fieldName)) {
+                        if ((token = parser.nextToken()) == XContentParser.Token.START_OBJECT) {
+                            token = parser.nextToken();
+                        } else {
+                            throw new ElasticsearchParseException("expected crs properties object.");
+                        }
+                        if (crsType == null) {
+                        } else if (crsType.equals("name")) {
+                            parser.nextToken();
+                            String name = convertToProj4Name(parser.text());
+                            if (name.substring(0,3).equals("OGC")) {
+                                crs = CRS.forName(name.substring(4));
+                            } else {
+                                crs = CRS_FACTORY.createFromName(convertToProj4Name(parser.text()));
+                            }
+                            // throw away garbage until reach end of 'properties' object
+                            while ( (parser.nextToken()) != XContentParser.Token.END_OBJECT );
+                        } else if (crsType.equals("link")) {
+                            throw new ElasticsearchParseException("crs 'link' type not yet supported");
+                        }
+                    }
+                }
+            }
+
+            return crs;
+        }
+
+        private static String convertToProj4Name(String ogcURN) {
+            // split on ':'
+            String[] ogcParts = ogcURN.split(":");
+
+            if (ogcParts.length != 7) {
+                throw new ElasticsearchParseException("invalid OGC URN [" + ogcURN + "] must be in the format: " +
+                        "urn:ogc:def:objectType:authority:version:code'");
+            }
+
+            // enforce crs objectType definitions
+            if (!ogcParts[3].equals("crs")) {
+                throw new ElasticsearchParseException("can only handle 'crs' OGC objectType [" + ogcParts[3] + "] provided");
+            }
+
+            // enforce EPSG, ESRI, NAD27, NAD83, and WORLD authority
+            if (!PROJ_AUTHORITIES.contains(ogcParts[4])) {
+                throw new ElasticsearchParseException("invalid projection authority [" + ogcParts[4] +
+                        "] must be one of " + PROJ_AUTHORITIES);
+            }
+
+            return ogcParts[4] + ":" + ogcParts[6];
+        }
+    }
+
+    protected static enum CRS {
+        // TODO MAPCS("CRS1", "+title=s/l:map +proj=cartesian +datum="),
+        CRS84("CRS84", "+title=long/lat:WGS84 +proj=longlat +datum=WGS84 +units=degrees"),
+        CRS83("CRS83", "+title=long/lat:NAD83 +proj=longlat +datum=NAD83 +units=degrees"),
+        CRS27("CRS27", "+title=long/lat:NAD27 +proj=longlat +datum=NAD27 +units=degrees");
+        // TODO NAVD88("CRS88", ""),
+        // TODO UTM("AUTO42001", "+title=long/lat:WGS84 +proj=longlat +datum=WGS84 +units=degrees"),
+        // TODO ATM("AUTO42002", ""),
+        // TODO ORTHO("AUTO42003", ""),
+        // TODO EQUIRECT("AUTO42004", ""),
+        // TODO MOLL("AUTO42005", "");
+
+        protected String name;
+        protected CoordinateReferenceSystem crs;
+
+        private CRS(String name, String params) {
+            this.name = name;
+            crs = CRS_FACTORY.createFromParameters(name, params);
+        }
+
+        protected static CoordinateReferenceSystem forName(String name) {
+            return CRS.valueOf(name.toUpperCase(Locale.ROOT)).crs;
+        }
+    }
+
     public static enum Orientation {
         LEFT,
         RIGHT;
@@ -653,6 +840,8 @@ public abstract class ShapeBuilder implements ToXContent {
     public static final String FIELD_COORDINATES = "coordinates";
     public static final String FIELD_GEOMETRIES = "geometries";
     public static final String FIELD_ORIENTATION = "orientation";
+    public static final String FIELD_CRS = "crs";
+    public static final String FIELD_PROPERTIES = "properties";
 
     protected static final boolean debugEnabled() {
         return LOGGER.isDebugEnabled() || DEBUG;
@@ -712,6 +901,7 @@ public abstract class ShapeBuilder implements ToXContent {
             CoordinateNode node = null;
             GeometryCollectionBuilder geometryCollections = null;
             Orientation requestedOrientation = (shapeMapper == null) ? Orientation.RIGHT : shapeMapper.orientation();
+            CoordinateReferenceSystem crs = (shapeMapper == null) ? WGS84 : shapeMapper.crs();
 
             XContentParser.Token token;
             while ((token = parser.nextToken()) != XContentParser.Token.END_OBJECT) {
@@ -723,16 +913,19 @@ public abstract class ShapeBuilder implements ToXContent {
                         shapeType = GeoShapeType.forName(parser.text());
                     } else if (FIELD_COORDINATES.equals(fieldName)) {
                         parser.nextToken();
-                        node = parseCoordinates(parser);
+                        node = parseCoordinates(parser, crs);
                     } else if (FIELD_GEOMETRIES.equals(fieldName)) {
                         parser.nextToken();
-                        geometryCollections = parseGeometries(parser, requestedOrientation);
+                        geometryCollections = parseGeometries(parser, requestedOrientation, crs);
                     } else if (CircleBuilder.FIELD_RADIUS.equals(fieldName)) {
                         parser.nextToken();
                         radius = Distance.parseDistance(parser.text());
                     } else if (FIELD_ORIENTATION.equals(fieldName)) {
                         parser.nextToken();
                         requestedOrientation = orientationFromString(parser.text());
+                    } else if (FIELD_CRS.equals(fieldName)) {
+                        parser.nextToken();
+                        crs = CRSBuilder.parseCRS(parser);
                     } else {
                         parser.nextToken();
                         parser.skipChildren();
@@ -752,14 +945,14 @@ public abstract class ShapeBuilder implements ToXContent {
             }
 
             switch (shapeType) {
-                case POINT: return parsePoint(node);
-                case MULTIPOINT: return parseMultiPoint(node);
-                case LINESTRING: return parseLineString(node);
-                case MULTILINESTRING: return parseMultiLine(node);
-                case POLYGON: return parsePolygon(node, requestedOrientation);
-                case MULTIPOLYGON: return parseMultiPolygon(node, requestedOrientation);
+                case POINT: return parsePoint(node, crs);
+                case MULTIPOINT: return parseMultiPoint(node, crs);
+                case LINESTRING: return parseLineString(node, crs);
+                case MULTILINESTRING: return parseMultiLine(node, crs);
+                case POLYGON: return parsePolygon(node, requestedOrientation, crs);
+                case MULTIPOLYGON: return parseMultiPolygon(node, requestedOrientation, crs);
                 case CIRCLE: return parseCircle(node, radius);
-                case ENVELOPE: return parseEnvelope(node, requestedOrientation);
+                case ENVELOPE: return parseEnvelope(node, requestedOrientation, crs);
                 case GEOMETRYCOLLECTION: return geometryCollections;
                 default:
                     throw new ElasticsearchParseException("Shape type [" + shapeType + "] not included");
@@ -777,16 +970,16 @@ public abstract class ShapeBuilder implements ToXContent {
             }
         }
 
-        protected static PointBuilder parsePoint(CoordinateNode node) {
+        protected static PointBuilder parsePoint(CoordinateNode node, CoordinateReferenceSystem crs) {
             validatePointNode(node);
-            return newPoint(node.coordinate);
+            return newPoint(node.coordinate, crs);
         }
 
         protected static CircleBuilder parseCircle(CoordinateNode coordinates, Distance radius) {
             return newCircleBuilder().center(coordinates.coordinate).radius(radius);
         }
 
-        protected static EnvelopeBuilder parseEnvelope(CoordinateNode coordinates, Orientation orientation) {
+        protected static EnvelopeBuilder parseEnvelope(CoordinateNode coordinates, Orientation orientation, CoordinateReferenceSystem crs) {
             // validate the coordinate array for envelope type
             if (coordinates.children.size() != 2) {
                 throw new ElasticsearchParseException("Invalid number of points (" + coordinates.children.size() + ") provided for " +
@@ -800,7 +993,7 @@ public abstract class ShapeBuilder implements ToXContent {
                 uL = new Coordinate(Math.min(uL.x, lR.x), Math.max(uL.y, lR.y));
                 lR = new Coordinate(Math.max(uLtmp.x, lR.x), Math.min(uLtmp.y, lR.y));
             }
-            return newEnvelope(orientation).topLeft(uL).bottomRight(lR);
+            return newEnvelope(orientation, crs).topLeft(uL).bottomRight(lR);
         }
 
         protected static void validateMultiPointNode(CoordinateNode coordinates) {
@@ -818,17 +1011,17 @@ public abstract class ShapeBuilder implements ToXContent {
             }
         }
 
-        protected static MultiPointBuilder parseMultiPoint(CoordinateNode coordinates) {
+        protected static MultiPointBuilder parseMultiPoint(CoordinateNode coordinates, CoordinateReferenceSystem crs) {
             validateMultiPointNode(coordinates);
 
-            MultiPointBuilder points = new MultiPointBuilder();
+            MultiPointBuilder points = new MultiPointBuilder(crs);
             for (CoordinateNode node : coordinates.children) {
                 points.point(node.coordinate);
             }
             return points;
         }
 
-        protected static LineStringBuilder parseLineString(CoordinateNode coordinates) {
+        protected static LineStringBuilder parseLineString(CoordinateNode coordinates, CoordinateReferenceSystem crs) {
             /**
              * Per GeoJSON spec (http://geojson.org/geojson-spec.html#linestring)
              * "coordinates" member must be an array of two or more positions
@@ -839,22 +1032,22 @@ public abstract class ShapeBuilder implements ToXContent {
                         coordinates.children.size() + " - must be >= 2)");
             }
 
-            LineStringBuilder line = newLineString();
+            LineStringBuilder line = newLineString(crs);
             for (CoordinateNode node : coordinates.children) {
                 line.point(node.coordinate);
             }
             return line;
         }
 
-        protected static MultiLineStringBuilder parseMultiLine(CoordinateNode coordinates) {
+        protected static MultiLineStringBuilder parseMultiLine(CoordinateNode coordinates, CoordinateReferenceSystem crs) {
             MultiLineStringBuilder multiline = newMultiLinestring();
             for (CoordinateNode node : coordinates.children) {
-                multiline.linestring(parseLineString(node));
+                multiline.linestring(parseLineString(node, crs));
             }
             return multiline;
         }
 
-        protected static LineStringBuilder parseLinearRing(CoordinateNode coordinates) {
+        protected static LineStringBuilder parseLinearRing(CoordinateNode coordinates, CoordinateReferenceSystem crs) {
             /**
              * Per GeoJSON spec (http://geojson.org/geojson-spec.html#linestring)
              * A LinearRing is closed LineString with 4 or more positions. The first and last positions
@@ -868,27 +1061,27 @@ public abstract class ShapeBuilder implements ToXContent {
                         coordinates.children.get(coordinates.children.size() - 1).coordinate)) {
                 throw new ElasticsearchParseException("Invalid LinearRing found (coordinates are not closed)");
             }
-            return parseLineString(coordinates);
+            return parseLineString(coordinates, crs);
         }
 
-        protected static PolygonBuilder parsePolygon(CoordinateNode coordinates, Orientation orientation) {
+        protected static PolygonBuilder parsePolygon(CoordinateNode coordinates, Orientation orientation, CoordinateReferenceSystem crs) {
             if (coordinates.children == null || coordinates.children.isEmpty()) {
                 throw new ElasticsearchParseException("Invalid LinearRing provided for type polygon. Linear ring must be an array of " +
                         "coordinates");
             }
 
-            LineStringBuilder shell = parseLinearRing(coordinates.children.get(0));
-            PolygonBuilder polygon = new PolygonBuilder(shell.points, orientation);
+            LineStringBuilder shell = parseLinearRing(coordinates.children.get(0), crs);
+            PolygonBuilder polygon = new PolygonBuilder(shell.points, orientation, crs);
             for (int i = 1; i < coordinates.children.size(); i++) {
-                polygon.hole(parseLinearRing(coordinates.children.get(i)));
+                polygon.hole(parseLinearRing(coordinates.children.get(i), crs));
             }
             return polygon;
         }
 
-        protected static MultiPolygonBuilder parseMultiPolygon(CoordinateNode coordinates, Orientation orientation) {
-            MultiPolygonBuilder polygons = newMultiPolygon(orientation);
+        protected static MultiPolygonBuilder parseMultiPolygon(CoordinateNode coordinates, Orientation orientation, CoordinateReferenceSystem crs) {
+            MultiPolygonBuilder polygons = newMultiPolygon(orientation, crs);
             for (CoordinateNode node : coordinates.children) {
-                polygons.polygon(parsePolygon(node, orientation));
+                polygons.polygon(parsePolygon(node, orientation, crs));
             }
             return polygons;
         }
@@ -900,13 +1093,14 @@ public abstract class ShapeBuilder implements ToXContent {
          * @return Geometry[] geometries of the GeometryCollection
          * @throws IOException Thrown if an error occurs while reading from the XContentParser
          */
-        protected static GeometryCollectionBuilder parseGeometries(XContentParser parser, Orientation orientation) throws IOException {
+        protected static GeometryCollectionBuilder parseGeometries(XContentParser parser, Orientation orientation,
+                                                                   CoordinateReferenceSystem crs) throws IOException {
             if (parser.currentToken() != XContentParser.Token.START_ARRAY) {
                 throw new ElasticsearchParseException("Geometries must be an array of geojson objects");
             }
         
             XContentParser.Token token = parser.nextToken();
-            GeometryCollectionBuilder geometryCollection = newGeometryCollection(orientation);
+            GeometryCollectionBuilder geometryCollection = newGeometryCollection(orientation, crs);
             while (token != XContentParser.Token.END_ARRAY) {
                 ShapeBuilder shapeBuilder = GeoShapeType.parse(parser);
                 geometryCollection.shape(shapeBuilder);

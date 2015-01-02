@@ -20,12 +20,17 @@
 package org.elasticsearch.common.geo.builders;
 
 import org.elasticsearch.common.xcontent.XContentBuilder;
+import org.osgeo.proj4j.CoordinateReferenceSystem;
 
 import java.io.IOException;
 
 public class LineStringBuilder extends BaseLineStringBuilder<LineStringBuilder> {
 
     public static final GeoShapeType TYPE = GeoShapeType.LINESTRING;
+
+    public LineStringBuilder(CoordinateReferenceSystem crs) {
+        super(crs);
+    }
 
     @Override
     public XContentBuilder toXContent(XContentBuilder builder, Params params) throws IOException {

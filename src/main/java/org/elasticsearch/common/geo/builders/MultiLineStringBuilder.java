@@ -26,6 +26,7 @@ import com.spatial4j.core.shape.jts.JtsGeometry;
 import com.vividsolutions.jts.geom.Coordinate;
 import com.vividsolutions.jts.geom.Geometry;
 import com.vividsolutions.jts.geom.LineString;
+import org.osgeo.proj4j.CoordinateReferenceSystem;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -37,8 +38,12 @@ public class MultiLineStringBuilder extends ShapeBuilder {
 
     private final ArrayList<BaseLineStringBuilder<?>> lines = new ArrayList<>();
 
+    public MultiLineStringBuilder(CoordinateReferenceSystem crs) {
+        super(Orientation.RIGHT, crs);
+    }
+
     public InternalLineStringBuilder linestring() {
-        InternalLineStringBuilder line = new InternalLineStringBuilder(this);
+        InternalLineStringBuilder line = new InternalLineStringBuilder(this, crs);
         this.lines.add(line);
         return line;
     }
@@ -104,8 +109,8 @@ public class MultiLineStringBuilder extends ShapeBuilder {
 
         private final MultiLineStringBuilder collection;
         
-        public InternalLineStringBuilder(MultiLineStringBuilder collection) {
-            super();
+        public InternalLineStringBuilder(MultiLineStringBuilder collection, CoordinateReferenceSystem crs) {
+            super(crs);
             this.collection = collection;
         }
         

@@ -22,6 +22,7 @@ package org.elasticsearch.common.geo.builders;
 import com.spatial4j.core.shape.Shape;
 import com.spatial4j.core.shape.ShapeCollection;
 import org.elasticsearch.common.xcontent.XContentBuilder;
+import org.osgeo.proj4j.CoordinateReferenceSystem;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -34,11 +35,11 @@ public class GeometryCollectionBuilder extends ShapeBuilder {
     protected final ArrayList<ShapeBuilder> shapes = new ArrayList<>();
 
     public GeometryCollectionBuilder() {
-        this(Orientation.RIGHT);
+        this(Orientation.RIGHT, WGS84);
     }
 
-    public GeometryCollectionBuilder(Orientation orientation) {
-        super(orientation);
+    public GeometryCollectionBuilder(Orientation orientation, CoordinateReferenceSystem crs) {
+        super(orientation, crs);
     }
 
     public GeometryCollectionBuilder shape(ShapeBuilder shape) {

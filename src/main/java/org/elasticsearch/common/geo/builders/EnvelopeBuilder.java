@@ -22,6 +22,7 @@ package org.elasticsearch.common.geo.builders;
 import com.spatial4j.core.shape.Rectangle;
 import com.vividsolutions.jts.geom.Coordinate;
 import org.elasticsearch.common.xcontent.XContentBuilder;
+import org.osgeo.proj4j.CoordinateReferenceSystem;
 
 import java.io.IOException;
 
@@ -33,11 +34,11 @@ public class EnvelopeBuilder extends ShapeBuilder {
     protected Coordinate bottomRight;
 
     public EnvelopeBuilder() {
-        this(Orientation.RIGHT);
+        this(Orientation.RIGHT, WGS84);
     }
 
-    public EnvelopeBuilder(Orientation orientation) {
-        super(orientation);
+    public EnvelopeBuilder(Orientation orientation, CoordinateReferenceSystem crs) {
+        super(orientation, crs);
     }
 
     public EnvelopeBuilder topLeft(Coordinate topLeft) {
@@ -46,7 +47,7 @@ public class EnvelopeBuilder extends ShapeBuilder {
     }
 
     public EnvelopeBuilder topLeft(double longitude, double latitude) {
-        return topLeft(coordinate(longitude, latitude));
+        return topLeft(coordinate(longitude, latitude, crs));
     }
 
     public EnvelopeBuilder bottomRight(Coordinate bottomRight) {
@@ -55,7 +56,7 @@ public class EnvelopeBuilder extends ShapeBuilder {
     }
 
     public EnvelopeBuilder bottomRight(double longitude, double latitude) {
-        return bottomRight(coordinate(longitude, latitude));
+        return bottomRight(coordinate(longitude, latitude, crs));
     }
 
     @Override

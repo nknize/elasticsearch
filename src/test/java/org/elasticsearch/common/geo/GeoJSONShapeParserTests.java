@@ -961,6 +961,41 @@ public class GeoJSONShapeParserTests extends ElasticsearchTestCase {
         ElasticsearchGeoAssertions.assertMultiPolygon(shape);
     }
 
+    @Test
+    public void testParse_CRSOption() throws IOException {
+        // test 1: valid ccw (right handed system) poly not crossing dateline (with 'right' field)
+        String polygonGeoJson = XContentFactory.jsonBuilder().startObject().field("type", "Polygon")
+                .field("orientation", "right")
+                .startArray("coordinates")
+                .startArray()
+                .startArray().value(176.0).value(15.0).endArray()
+                .startArray().value(-177.0).value(10.0).endArray()
+                .startArray().value(-177.0).value(-10.0).endArray()
+                .startArray().value(176.0).value(-15.0).endArray()
+                .startArray().value(172.0).value(0.0).endArray()
+                .startArray().value(176.0).value(15.0).endArray()
+                .endArray()
+                .startArray()
+                .startArray().value(-172.0).value(8.0).endArray()
+                .startArray().value(174.0).value(10.0).endArray()
+                .startArray().value(-172.0).value(-8.0).endArray()
+                .startArray().value(-172.0).value(8.0).endArray()
+                .endArray()
+                .endArray()
+                .startObject("crs").field("type", "name")
+                .startObject("properties").field("name", "urn:ogc:def:crs:EPSG:1.3:4326")
+                .endObject()
+                .endObject()
+                .endObject()
+                .string();
+
+        XContentParser parser = JsonXContent.jsonXContent.createParser(polygonGeoJson);
+        parser.nextToken();
+        Shape shape = ShapeBuilder.parse(parser).build();
+
+        ElasticsearchGeoAssertions.assertPolygon(shape);
+    }
+
     private void assertGeometryEquals(Shape expected, String geoJson) throws IOException {
         XContentParser parser = JsonXContent.jsonXContent.createParser(geoJson);
         parser.nextToken();

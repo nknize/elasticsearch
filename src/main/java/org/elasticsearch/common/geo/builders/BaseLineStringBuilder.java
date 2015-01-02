@@ -31,15 +31,16 @@ import com.vividsolutions.jts.geom.Coordinate;
 import com.vividsolutions.jts.geom.Geometry;
 import com.vividsolutions.jts.geom.GeometryFactory;
 import com.vividsolutions.jts.geom.LineString;
+import org.osgeo.proj4j.CoordinateReferenceSystem;
 
 public abstract class BaseLineStringBuilder<E extends BaseLineStringBuilder<E>> extends PointCollection<E> {
 
-    protected BaseLineStringBuilder() {
-        this(new ArrayList<Coordinate>());
+    protected BaseLineStringBuilder(CoordinateReferenceSystem crs) {
+        this(new ArrayList<Coordinate>(), crs);
     }
 
-    protected BaseLineStringBuilder(ArrayList<Coordinate> points) {
-        super(points);
+    protected BaseLineStringBuilder(ArrayList<Coordinate> points, CoordinateReferenceSystem crs) {
+        super(points, crs);
     }
 
     @Override

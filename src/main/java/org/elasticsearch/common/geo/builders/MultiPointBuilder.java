@@ -24,6 +24,7 @@ import com.spatial4j.core.shape.Shape;
 import com.spatial4j.core.shape.ShapeCollection;
 import com.vividsolutions.jts.geom.Coordinate;
 import org.elasticsearch.common.xcontent.XContentBuilder;
+import org.osgeo.proj4j.CoordinateReferenceSystem;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -32,6 +33,10 @@ import java.util.List;
 public class MultiPointBuilder extends PointCollection<MultiPointBuilder> {
 
     public static final GeoShapeType TYPE = GeoShapeType.MULTIPOINT;
+
+    public MultiPointBuilder(CoordinateReferenceSystem crs) {
+        super(crs);
+    }
 
     @Override
     public XContentBuilder toXContent(XContentBuilder builder, Params params) throws IOException {
@@ -49,6 +54,8 @@ public class MultiPointBuilder extends PointCollection<MultiPointBuilder> {
         //MultiPoint geometry = FACTORY.createMultiPoint(points.toArray(new Coordinate[points.size()]));
         List<Point> shapes = new ArrayList<>(points.size());
         for (Coordinate coord : points) {
+            // reproject to WGS84
+
             shapes.add(SPATIAL_CONTEXT.makePoint(coord.x, coord.y));
         }
         return new ShapeCollection<>(shapes, SPATIAL_CONTEXT);

@@ -25,6 +25,7 @@ import org.elasticsearch.common.xcontent.XContentBuilder;
 
 import com.spatial4j.core.shape.Point;
 import com.vividsolutions.jts.geom.Coordinate;
+import org.osgeo.proj4j.CoordinateReferenceSystem;
 
 public class PointBuilder extends ShapeBuilder {
 
@@ -32,8 +33,9 @@ public class PointBuilder extends ShapeBuilder {
 
     private Coordinate coordinate;
 
-    public PointBuilder coordinate(Coordinate coordinate) {
+    public PointBuilder coordinate(Coordinate coordinate, CoordinateReferenceSystem crs) {
         this.coordinate = coordinate;
+        this.crs = crs;
         return this;
     }
 
