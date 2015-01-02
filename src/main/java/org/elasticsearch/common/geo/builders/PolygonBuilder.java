@@ -22,20 +22,21 @@ package org.elasticsearch.common.geo.builders;
 import java.util.ArrayList;
 
 import com.vividsolutions.jts.geom.Coordinate;
+import org.osgeo.proj4j.CoordinateReferenceSystem;
 
 public class PolygonBuilder extends BasePolygonBuilder<PolygonBuilder> {
 
     public PolygonBuilder() {
-        this(new ArrayList<Coordinate>(), Orientation.RIGHT);
+        this(new ArrayList<Coordinate>(), Orientation.RIGHT, WGS84);
     }
 
-    public PolygonBuilder(Orientation orientation) {
-        this(new ArrayList<Coordinate>(), orientation);
+    public PolygonBuilder(Orientation orientation, CoordinateReferenceSystem crs) {
+        this(new ArrayList<Coordinate>(), orientation, crs);
     }
 
-    protected PolygonBuilder(ArrayList<Coordinate> points, Orientation orientation) {
-        super(orientation);
-        this.shell = new Ring<>(this, points);
+    protected PolygonBuilder(ArrayList<Coordinate> points, Orientation orientation, CoordinateReferenceSystem crs) {
+        super(orientation, crs);
+        this.shell = new Ring<>(this, points, crs);
     }
 
     @Override

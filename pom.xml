@@ -56,6 +56,11 @@
             <id>Lucene snapshots</id>
             <url>https://download.elasticsearch.org/lucenesnapshots/1650327</url>
         </repository>
+        <repository>
+            <id>osgeo</id>
+            <name>Open Source Geospatial Foundation Repository</name>
+            <url>http://download.osgeo.org/webdav/geotools/</url>
+        </repository>
     </repositories>
 
     <dependencies>
@@ -183,6 +188,20 @@
                     <artifactId>xercesImpl</artifactId>
                 </exclusion>
             </exclusions>
+        </dependency>
+        <dependency>
+            <groupId>org.osgeo</groupId>
+            <artifactId>proj4j</artifactId>
+            <version>0.1.0</version>
+            <scope>compile</scope>
+            <optional>true</optional>
+        </dependency>
+        <dependency>
+            <groupId>org.geotools</groupId>
+            <artifactId>gt-referencing</artifactId>
+            <version>12-RC1</version>
+            <scope>compile</scope>
+            <optional>true</optional>
         </dependency>
         <!-- needed for templating -->
         <dependency>
@@ -942,7 +961,7 @@
                                 </data>
                                 <data>
                                     <src>${project.build.directory}/lib</src>
-                                    <includes>lucene*, *log4j*, jna*, spatial4j*, jts*, groovy*</includes>
+                                    <includes>lucene*, *log4j*, jna*, spatial4j*, jts*, proj4j*, groovy*</includes>
                                     <type>directory</type>
                                     <mapper>
                                         <type>perm</type>
@@ -1147,6 +1166,8 @@
                                         <include>jna*</include>
                                         <include>spatial4j*</include>
                                         <include>jts*</include>
+                                        <include>proj4j*</include>
+                                        <include>gt-*</include>
                                         <include>groovy*</include>
                                     </includes>
                                 </source>

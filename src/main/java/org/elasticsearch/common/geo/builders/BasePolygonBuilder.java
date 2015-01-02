@@ -23,6 +23,7 @@ import com.spatial4j.core.shape.Shape;
 import com.vividsolutions.jts.geom.*;
 import org.elasticsearch.ElasticsearchParseException;
 import org.elasticsearch.common.xcontent.XContentBuilder;
+import org.osgeo.proj4j.CoordinateReferenceSystem;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -48,8 +49,8 @@ public abstract class BasePolygonBuilder<E extends BasePolygonBuilder<E>> extend
     // List of linear rings defining the holes of the polygon 
     protected final ArrayList<BaseLineStringBuilder<?>> holes = new ArrayList<>();
 
-    public BasePolygonBuilder(Orientation orientation) {
-        super(orientation);
+    public BasePolygonBuilder(Orientation orientation, CoordinateReferenceSystem crs) {
+        super(orientation, crs);
     }
 
     @SuppressWarnings("unchecked")
@@ -98,7 +99,7 @@ public abstract class BasePolygonBuilder<E extends BasePolygonBuilder<E>> extend
      * @return this
      */
     public Ring<E> hole() {
-        Ring<E> hole = new Ring<>(thisRef());
+        Ring<E> hole = new Ring<>(thisRef(), crs);
         this.holes.add(hole);
         return hole;
     }
@@ -476,12 +477,12 @@ public abstract class BasePolygonBuilder<E extends BasePolygonBuilder<E>> extend
 
         private final P parent;
 
-        protected Ring(P parent) {
-            this(parent, new ArrayList<Coordinate>());
+        protected Ring(P parent, CoordinateReferenceSystem crs) {
+            this(parent, new ArrayList<Coordinate>(), crs);
         }
 
-        protected Ring(P parent, ArrayList<Coordinate> points) {
-            super(points);
+        protected Ring(P parent, ArrayList<Coordinate> points, CoordinateReferenceSystem crs) {
+            super(points, crs);
             this.parent = parent;
         }
 

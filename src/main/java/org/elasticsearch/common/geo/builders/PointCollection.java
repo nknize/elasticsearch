@@ -27,6 +27,7 @@ import java.util.Collection;
 import org.elasticsearch.common.xcontent.XContentBuilder;
 
 import com.vividsolutions.jts.geom.Coordinate;
+import org.osgeo.proj4j.CoordinateReferenceSystem;
 
 /**
  * The {@link PointCollection} is an abstract base implementation for all GeoShapes. It simply handles a set of points. 
@@ -36,12 +37,13 @@ public abstract class PointCollection<E extends PointCollection<E>> extends Shap
     protected final ArrayList<Coordinate> points;
     protected boolean translated = false;
 
-    protected PointCollection() {
-        this(new ArrayList<Coordinate>());
+    protected PointCollection(CoordinateReferenceSystem crs) {
+        this(new ArrayList<Coordinate>(), crs);
     }
 
-    protected PointCollection(ArrayList<Coordinate> points) {
+    protected PointCollection(ArrayList<Coordinate> points, CoordinateReferenceSystem crs) {
         this.points = points;
+        this.crs = crs;
     }
     
     @SuppressWarnings("unchecked")
@@ -56,7 +58,7 @@ public abstract class PointCollection<E extends PointCollection<E>> extends Shap
      * @return this
      */
     public E point(double longitude, double latitude) {
-        return this.point(coordinate(longitude, latitude));
+        return this.point(coordinate(longitude, latitude, crs));
     } 
 
     /**
@@ -65,7 +67,11 @@ public abstract class PointCollection<E extends PointCollection<E>> extends Shap
      * @return this
      */
     public E point(Coordinate coordinate) {
-        this.points.add(coordinate);
+        if (this.crs != WGS84) {
+            this.points.add(coordinate(coordinate, this.crs, WGS84));
+        } else {
+            this.points.add(coordinate);
+        }
         return thisRef();
     }
 
