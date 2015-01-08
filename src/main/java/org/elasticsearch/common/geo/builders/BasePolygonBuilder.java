@@ -147,6 +147,7 @@ public abstract class BasePolygonBuilder<E extends BasePolygonBuilder<E>> extend
 
     @Override
     public Shape build() {
+        this.close();
         return jtsGeometry(buildGeometry(FACTORY, wrapdateline));
     }
 

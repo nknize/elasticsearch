@@ -27,6 +27,7 @@ import com.spatial4j.core.shape.ShapeCollection;
 import com.spatial4j.core.shape.jts.JtsGeometry;
 import com.spatial4j.core.shape.jts.JtsPoint;
 import com.vividsolutions.jts.geom.*;
+import org.apache.commons.lang3.tuple.Pair;
 import org.elasticsearch.ElasticsearchIllegalArgumentException;
 import org.elasticsearch.ElasticsearchParseException;
 import org.elasticsearch.common.geo.builders.ShapeBuilder;
@@ -51,6 +52,7 @@ import static org.elasticsearch.common.geo.builders.ShapeBuilder.SPATIAL_CONTEXT
 public class GeoJSONShapeParserTests extends ElasticsearchTestCase {
 
     private final static GeometryFactory GEOMETRY_FACTORY = SPATIAL_CONTEXT.getGeometryFactory();
+    private final static double PROJECTION_TOLERANCE = 1E-8;
 
     @Test
     public void testParse_simplePoint() throws IOException {
@@ -179,16 +181,15 @@ public class GeoJSONShapeParserTests extends ElasticsearchTestCase {
                 .endArray()
                 .endObject().string();
 
-        List<Coordinate> shellCoordinates = new ArrayList<>();
-        shellCoordinates.add(new Coordinate(100, 0));
-        shellCoordinates.add(new Coordinate(101, 0));
-        shellCoordinates.add(new Coordinate(101, 1));
-        shellCoordinates.add(new Coordinate(100, 1));
-        shellCoordinates.add(new Coordinate(100, 0));
-
-        LinearRing shell = GEOMETRY_FACTORY.createLinearRing(shellCoordinates.toArray(new Coordinate[shellCoordinates.size()]));
-        Polygon expected = GEOMETRY_FACTORY.createPolygon(shell, null);
-        assertGeometryEquals(jtsGeom(expected), polygonGeoJson);
+        Coordinate[] shell = new Coordinate[] {
+                new Coordinate(100, 0),
+                new Coordinate(101, 0),
+                new Coordinate(101, 1),
+                new Coordinate(100, 1),
+                new Coordinate(100, 0)
+        };
+        Shape expected = createPolygons(shell);
+        assertGeometryEquals(expected, polygonGeoJson);
     }
 
     @Test
@@ -569,27 +570,22 @@ public class GeoJSONShapeParserTests extends ElasticsearchTestCase {
                 .endArray()
                 .endObject().string();
 
-        List<Coordinate> shellCoordinates = new ArrayList<>();
-        shellCoordinates.add(new Coordinate(100, 0));
-        shellCoordinates.add(new Coordinate(101, 0));
-        shellCoordinates.add(new Coordinate(101, 1));
-        shellCoordinates.add(new Coordinate(100, 1));
-        shellCoordinates.add(new Coordinate(100, 0));
+        Coordinate[] shell = new Coordinate[] {
+                new Coordinate(100, 0),
+                new Coordinate(101, 0),
+                new Coordinate(101, 1),
+                new Coordinate(100, 1)
+        };
 
-        List<Coordinate> holeCoordinates = new ArrayList<>();
-        holeCoordinates.add(new Coordinate(100.2, 0.2));
-        holeCoordinates.add(new Coordinate(100.8, 0.2));
-        holeCoordinates.add(new Coordinate(100.8, 0.8));
-        holeCoordinates.add(new Coordinate(100.2, 0.8));
-        holeCoordinates.add(new Coordinate(100.2, 0.2));
+        Coordinate[][] holes = new Coordinate[][] {{
+                new Coordinate(100.2, 0.8),
+                new Coordinate(100.2, 0.2),
+                new Coordinate(100.8, 0.2),
+                new Coordinate(100.8, 0.8)
+        }};
 
-        LinearRing shell = GEOMETRY_FACTORY.createLinearRing(
-                shellCoordinates.toArray(new Coordinate[shellCoordinates.size()]));
-        LinearRing[] holes = new LinearRing[1];
-        holes[0] = GEOMETRY_FACTORY.createLinearRing(
-                holeCoordinates.toArray(new Coordinate[holeCoordinates.size()]));
-        Polygon expected = GEOMETRY_FACTORY.createPolygon(shell, holes);
-        assertGeometryEquals(jtsGeom(expected), polygonGeoJson);
+        Shape expected = createPolygons(Pair.of(shell, holes));
+        assertGeometryEquals(expected, polygonGeoJson);
     }
 
     @Test
@@ -662,38 +658,28 @@ public class GeoJSONShapeParserTests extends ElasticsearchTestCase {
                 .endArray()
                 .endObject().string();
 
-        List<Coordinate> shellCoordinates = new ArrayList<>();
-        shellCoordinates.add(new Coordinate(100, 0));
-        shellCoordinates.add(new Coordinate(101, 0));
-        shellCoordinates.add(new Coordinate(101, 1));
-        shellCoordinates.add(new Coordinate(100, 1));
-        shellCoordinates.add(new Coordinate(100, 0));
+        Coordinate[] shell1 = new Coordinate[] {
+                new Coordinate(102, 3),
+                new Coordinate(103, 3),
+                new Coordinate(103, 2),
+                new Coordinate(102, 2)
+        };
 
-        List<Coordinate> holeCoordinates = new ArrayList<>();
-        holeCoordinates.add(new Coordinate(100.2, 0.2));
-        holeCoordinates.add(new Coordinate(100.8, 0.2));
-        holeCoordinates.add(new Coordinate(100.8, 0.8));
-        holeCoordinates.add(new Coordinate(100.2, 0.8));
-        holeCoordinates.add(new Coordinate(100.2, 0.2));
+        Coordinate[] shell2 = new Coordinate[] {
+                new Coordinate(100, 0),
+                new Coordinate(101, 0),
+                new Coordinate(101, 1),
+                new Coordinate(100, 1)
+        };
 
-        LinearRing shell = GEOMETRY_FACTORY.createLinearRing(shellCoordinates.toArray(new Coordinate[shellCoordinates.size()]));
-        LinearRing[] holes = new LinearRing[1];
-        holes[0] = GEOMETRY_FACTORY.createLinearRing(holeCoordinates.toArray(new Coordinate[holeCoordinates.size()]));
-        Polygon withHoles = GEOMETRY_FACTORY.createPolygon(shell, holes);
+        Coordinate[][] holes = new Coordinate[][] {{
+                new Coordinate(100.2, 0.2),
+                new Coordinate(100.8, 0.2),
+                new Coordinate(100.8, 0.8),
+                new Coordinate(100.2, 0.8)
+        }};
 
-        shellCoordinates = new ArrayList<>();
-        shellCoordinates.add(new Coordinate(102, 3));
-        shellCoordinates.add(new Coordinate(103, 3));
-        shellCoordinates.add(new Coordinate(103, 2));
-        shellCoordinates.add(new Coordinate(102, 2));
-        shellCoordinates.add(new Coordinate(102, 3));
-
-
-        shell = GEOMETRY_FACTORY.createLinearRing(shellCoordinates.toArray(new Coordinate[shellCoordinates.size()]));
-        Polygon withoutHoles = GEOMETRY_FACTORY.createPolygon(shell, null);
-
-        Shape expected = shapeCollection(withoutHoles, withHoles);
-
+        Shape expected = createPolygons(new Pair[] {Pair.of(shell1, new Coordinate[][]{}), Pair.of(shell2, holes)});
         assertGeometryEquals(expected, multiPolygonGeoJson);
 
         // test #2: multipolygon; one polygon with one hole
@@ -996,10 +982,97 @@ public class GeoJSONShapeParserTests extends ElasticsearchTestCase {
         ElasticsearchGeoAssertions.assertPolygon(shape);
     }
 
+    @Test
+    public void testCRSTransform() throws IOException {
+        // test 1: valid ccw (right handed system) poly not crossing dateline (with 'right' field)
+        String polygonGeoJson = XContentFactory.jsonBuilder().startObject().field("type", "Polygon")
+                .field("orientation", "left")
+                .startArray("coordinates")
+                .startArray()
+                .startArray().value(575025).value(4138885).endArray()
+                .startArray().value(573826).value(4138128).endArray()
+                .startArray().value(574247).value(4137207).endArray()
+                .startArray().value(575357).value(4137134).endArray()
+                .startArray().value(576008).value(4137817).endArray()
+                .startArray().value(575025).value(4138885).endArray()
+                .endArray()
+                .startArray()
+                .startArray().value(575000).value(4138304).endArray()
+                .startArray().value(574779).value(4137994).endArray()
+                .startArray().value(575155).value(4138062).endArray()
+                .startArray().value(575000).value(4138304).endArray()
+                .endArray()
+                .endArray()
+                .startObject("crs").field("type", "name")
+                .startObject("properties").field("name", "urn:ogc:def:crs:EPSG:1.3:3157")
+                .endObject()
+                .endObject()
+                .endObject()
+                .string();
+
+        Coordinate[] shell = new Coordinate[] {
+                new Coordinate(-122.15241390, 37.39369764),
+                new Coordinate(-122.16603372, 37.38697121),
+                new Coordinate(-122.16137087, 37.37863671),
+                new Coordinate(-122.14884197, 37.37788921),
+                new Coordinate(-122.14141949, 37.38399183)
+        };
+
+        Coordinate[][] holes = new Coordinate[][] {{
+                new Coordinate(-122.15275524, 37.38846320),
+                new Coordinate(-122.15528289, 37.38568708),
+                new Coordinate(-122.15102904, 37.38626954)
+        }};
+
+        Shape expected = createPolygons(Pair.of(shell, holes));
+        assertGeometryEquals(expected, polygonGeoJson, PROJECTION_TOLERANCE);
+    }
+
     private void assertGeometryEquals(Shape expected, String geoJson) throws IOException {
+        assertGeometryEquals(expected, geoJson, 0.0);
+    }
+
+    private void assertGeometryEquals(Shape expected, String geoJson, double tolerance) throws IOException {
         XContentParser parser = JsonXContent.jsonXContent.createParser(geoJson);
         parser.nextToken();
-        ElasticsearchGeoAssertions.assertEquals(expected, ShapeBuilder.parse(parser).build());
+        ElasticsearchGeoAssertions.assertEquals(expected, ShapeBuilder.parse(parser).build(), tolerance);
+    }
+
+    private Shape createPolygons(Coordinate[]... shells) {
+        Pair<Coordinate[], Coordinate[][]>[] polys = new Pair[shells.length];
+        for (int i=0; i<shells.length; ++i) {
+            Coordinate[] shell = shells[i];
+            polys[i] = Pair.of(shell, new Coordinate[][]{});
+        }
+        return createPolygons(polys);
+    }
+
+    private Shape createPolygons(Pair<Coordinate[], Coordinate[][]>... polygons) {
+        Polygon[] polys = new Polygon[polygons.length];
+        for (int i = 0; i < polygons.length; ++i) {
+            // build shell, ensuring coordinates are closed
+            Pair<Coordinate[], Coordinate[][]> poly = polygons[i];
+            LinearRing shell = GEOMETRY_FACTORY.createLinearRing(closeRing(poly.getLeft()));
+            // build holes
+            LinearRing[] holes = new LinearRing[poly.getRight().length];
+            for (int j=0; j<holes.length; ++j) {
+                holes[j] = GEOMETRY_FACTORY.createLinearRing(closeRing(poly.getRight()[j]));
+            }
+            polys[i] = GEOMETRY_FACTORY.createPolygon(shell, holes);
+        }
+
+       return (polys.length > 1) ? shapeCollection(polys) : jtsGeom(polys[0]);
+    }
+
+    private Coordinate[] closeRing(Coordinate[] ring) {
+        int length = ring.length;
+        Coordinate[] newRing = ring;
+        if (!ring[0].equals(ring[length-1])) {
+            newRing = new Coordinate[length+1];
+            System.arraycopy(ring, 0, newRing, 0, length);
+            newRing[length] = newRing[0];
+        }
+        return newRing;
     }
 
     private ShapeCollection<Shape> shapeCollection(Shape... shapes) {
@@ -1017,5 +1090,4 @@ public class GeoJSONShapeParserTests extends ElasticsearchTestCase {
     private JtsGeometry jtsGeom(Geometry geom) {
         return new JtsGeometry(geom, SPATIAL_CONTEXT, false, false);
     }
-
 }
