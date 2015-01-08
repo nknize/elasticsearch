@@ -110,7 +110,6 @@ public class GeoJSONShapeParserTests extends ElasticsearchTestCase {
         assertGeometryEquals(jtsGeom(expected), multilinesGeoJson);
     }
 
-    @Test
     public void testParse_circle() throws IOException {
         String multilinesGeoJson = XContentFactory.jsonBuilder().startObject().field("type", "circle")
                 .startArray("coordinates").value(100.0).value(0.0).endArray()
@@ -683,7 +682,7 @@ public class GeoJSONShapeParserTests extends ElasticsearchTestCase {
         assertGeometryEquals(expected, multiPolygonGeoJson);
 
         // test #2: multipolygon; one polygon with one hole
-        // this test converting the multipolygon from a ShapeCollection type
+        // this tests converting the multipolygon from a ShapeCollection type
         // to a simple polygon (jtsGeom)
         multiPolygonGeoJson = XContentFactory.jsonBuilder().startObject().field("type", "MultiPolygon")
                 .startArray("coordinates")
@@ -706,26 +705,22 @@ public class GeoJSONShapeParserTests extends ElasticsearchTestCase {
                 .endArray()
                 .endObject().string();
 
-        shellCoordinates = new ArrayList<>();
-        shellCoordinates.add(new Coordinate(100, 1));
-        shellCoordinates.add(new Coordinate(101, 1));
-        shellCoordinates.add(new Coordinate(101, 0));
-        shellCoordinates.add(new Coordinate(100, 0));
-        shellCoordinates.add(new Coordinate(100, 1));
+        shell1 = new Coordinate[] {
+                new Coordinate(100.0, 1.0),
+                new Coordinate(101.0, 1.0),
+                new Coordinate(101.0, 0.0),
+                new Coordinate(100.0, 0.0)
+        };
 
-        holeCoordinates = new ArrayList<>();
-        holeCoordinates.add(new Coordinate(100.2, 0.8));
-        holeCoordinates.add(new Coordinate(100.2, 0.2));
-        holeCoordinates.add(new Coordinate(100.8, 0.2));
-        holeCoordinates.add(new Coordinate(100.8, 0.8));
-        holeCoordinates.add(new Coordinate(100.2, 0.8));
+        holes = new Coordinate[][] {{
+                new Coordinate(100.2, 0.8),
+                new Coordinate(100.2, 0.2),
+                new Coordinate(100.8, 0.2),
+                new Coordinate(100.8, 0.8)
+        }};
 
-        shell = GEOMETRY_FACTORY.createLinearRing(shellCoordinates.toArray(new Coordinate[shellCoordinates.size()]));
-        holes = new LinearRing[1];
-        holes[0] = GEOMETRY_FACTORY.createLinearRing(holeCoordinates.toArray(new Coordinate[holeCoordinates.size()]));
-        withHoles = GEOMETRY_FACTORY.createPolygon(shell, holes);
-
-        assertGeometryEquals(jtsGeom(withHoles), multiPolygonGeoJson);
+        expected = createPolygons(new Pair[] {Pair.of(shell1, holes)});
+        assertGeometryEquals(expected, multiPolygonGeoJson);
     }
 
     @Test
