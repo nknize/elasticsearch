@@ -30,6 +30,7 @@ import org.apache.lucene.spatial.prefix.tree.QuadPrefixTree;
 import org.apache.lucene.spatial.prefix.tree.SpatialPrefixTree;
 import org.elasticsearch.ElasticsearchIllegalArgumentException;
 import org.elasticsearch.ElasticsearchParseException;
+import org.elasticsearch.bootstrap.Elasticsearch;
 import org.elasticsearch.common.Strings;
 import org.elasticsearch.common.geo.GeoUtils;
 import org.elasticsearch.common.geo.SpatialStrategy;
@@ -46,12 +47,9 @@ import org.elasticsearch.index.mapper.MapperParsingException;
 import org.elasticsearch.index.mapper.ParseContext;
 import org.elasticsearch.index.mapper.core.AbstractFieldMapper;
 import org.osgeo.proj4j.CoordinateReferenceSystem;
-//import org.geotools.referencing.CRS;
-//import org.opengis.referencing.FactoryException;
-//import org.opengis.referencing.NoSuchAuthorityCodeException;
-//import org.opengis.referencing.crs.CoordinateReferenceSystem;
 
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -229,32 +227,59 @@ public class GeoShapeFieldMapper extends AbstractFieldMapper<String> {
         public CoordinateReferenceSystem parseCRSMapping(Map<String, Object> mapping) {
             Iterator<Map.Entry<String, Object>> iterator = mapping.entrySet().iterator();
             // parse DocumentMapper
+//            if (!mapping.containsKey("type")) {
+//                throw new ElasticsearchParseException("crs object does not contain a required " +
+//                        "'type' field which must be one of 'name' or 'link");
+//            } else {
+//                Map.Entry props = ((Map.Entry)mapping.get("properties"));
+//                if (props == null) {
+//                    throw new ElasticsearchParseException("crs object does not contain required 'properties' object");
+//                }
+//                String fieldName = Strings.toUnderscoreCase((String)mapping.get("type"));
+//                switch (fieldName) {
+//                    case "name":
+//                        Object crsNameMapObj = props.getValue();
+//                        HashMap crsNameMap;
+//                        if (crsNameMapObj == null || !(crsNameMapObj instanceof HashMap)
+//                                || !(crsNameMap = (HashMap)crsNameMapObj).containsKey("name")) {
+//                            throw new ElasticsearchParseException("crs properties does not contain a name");
+//                        }
+//                        String crsName = (String)((Map.Entry)(crsNameMap.get("name"))).getValue();
+//                        return ShapeBuilder.createCRSfromName(Strings.toUnderscoreCase(crsName));
+//                    case "link":
+//                        return ShapeBuilder.createCRSfromLink(null);
+//                    default:
+//                        throw new IllegalArgumentException("no such crs type [" + fieldName + "]");
+//                }
+//            }
+
+            Map.Entry<String, Object> props;
+            String propStr = null;
+            String type = null;
             while (iterator.hasNext()) {
                 Map.Entry<String, Object> entry = iterator.next();
                 String fieldName = Strings.toUnderscoreCase(entry.getKey());
                 Object fieldNode = entry.getValue();
-
                 if ("type".equals(fieldName)) {
                     iterator.remove();
-                    Map.Entry<String, Object> props = iterator.next();
-                    if (!"properties".equals(Strings.toUnderscoreCase(props.getKey()))) {
-                        throw new ElasticsearchParseException("found <" + props.getKey() + "> when expecting <properties> field");
-                    } else {
-                        String propStr = props.getValue().toString();
-                        switch (fieldNode.toString()) {
-                            case "name":
-                                return /*CRS.decode(propStr);*/ ShapeBuilder.createCRSfromName(propStr);
-                            case "link":
-                                return ShapeBuilder.createCRSfromLink(propStr);
-                            default:
-                                throw new IllegalArgumentException("no such crs type [" + fieldNode + "]");
-                        }
-                    }
+                    type = fieldNode.toString();
+                } else if ("properties".equals(fieldName)) {
+                    iterator.remove();
+                    props = entry;
+                    propStr = ((Map)(props.getValue())).get("name").toString();
                 } else {
                     throw new ElasticsearchParseException("found <" + fieldName + "> when expecting <type> field");
                 }
             }
-            return ShapeBuilder.WGS84;
+
+            switch (type) {
+                case "name":
+                    return ShapeBuilder.createCRSfromName(ShapeBuilder.CRSBuilder.convertToProj4Name(propStr));
+                case "link":
+                    return ShapeBuilder.createCRSfromLink(propStr);
+                default:
+                    throw new IllegalArgumentException("no such crs type [" + type + "]");
+            }
         }
     }
 
@@ -266,7 +291,7 @@ public class GeoShapeFieldMapper extends AbstractFieldMapper<String> {
 
     public GeoShapeFieldMapper(FieldMapper.Names names, SpatialPrefixTree tree, String defaultStrategyName, double distanceErrorPct,
                                Orientation shapeOrientation, CoordinateReferenceSystem crs, FieldType fieldType, PostingsFormatProvider
-            postingsProvider, DocValuesFormatProvider docValuesProvider, MultiFields multiFields, CopyTo copyTo) {
+                               postingsProvider, DocValuesFormatProvider docValuesProvider, MultiFields multiFields, CopyTo copyTo) {
         super(names, 1, fieldType, null, null, null, postingsProvider, docValuesProvider, null, null, null, null, multiFields, copyTo);
         this.recursiveStrategy = new RecursivePrefixTreeStrategy(tree, names.indexName());
         this.recursiveStrategy.setDistErrPct(distanceErrorPct);
@@ -344,6 +369,19 @@ public class GeoShapeFieldMapper extends AbstractFieldMapper<String> {
 
         if (includeDefaults || defaultStrategy.getDistErrPct() != Defaults.DISTANCE_ERROR_PCT) {
             builder.field(Names.DISTANCE_ERROR_PCT, defaultStrategy.getDistErrPct());
+        }
+
+        if (includeDefaults || shapeOrientation != Defaults.ORIENTATION ) {
+            builder.field(Names.ORIENTATION, shapeOrientation);
+        }
+
+        if (includeDefaults || crs != Defaults.COORDINATE_REFERENCE_SYSTEM) {
+            builder.startObject("crs")
+                    .field("type", "name")
+                    .startObject("properties")
+                    .field("name", "urn:ogc:def:crs:" + crs.getName().replace(":", ":1.3:"))
+                    .endObject()
+                    .endObject();
         }
     }
 

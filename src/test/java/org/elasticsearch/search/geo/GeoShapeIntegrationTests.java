@@ -428,4 +428,48 @@ public class GeoShapeIntegrationTests extends ElasticsearchIntegrationTest {
         assertSearchResponse(result);
         assertHitCount(result, 1);
     }
+
+    public void testShapeFilter_MultipleProjections() throws Exception {
+        String mapping = XContentFactory.jsonBuilder().startObject().startObject("type1")
+                .startObject("properties").startObject("location")
+                .field("type", "geo_shape")
+                .field("tree", "quadtree")
+                .startObject("crs").field("type", "name")
+                .startObject("properties").field("name", "urn:ogc:def:crs:EPSG:1.3:3395")
+                .endObject()
+                .endObject()
+                .endObject().endObject()
+                .endObject().endObject().string();
+        assertAcked(prepareCreate("crs").addMapping("type1", mapping));
+        ensureGreen();
+
+        indexRandom(true, client().prepareIndex("test", "type1", "mercator").setSource(jsonBuilder().startObject()
+                .field("name", "Mercator Test")
+                .startObject("location")
+                .field("type", "polygon")
+                .startArray("coordinates").startArray()
+                .startArray().value(-10848084.37780451).value(3864110.0283834795).endArray()
+                .startArray().value(-10859216.326883838).value(3870712.7380463844).endArray()
+                .startArray().value(-10892612.174121818).value(3674233.101756766).endArray()
+                .startArray().value(-10846971.182896577).value(3545014.813100937).endArray() // close the polygon
+                .startArray().value(-10845857.987988645).value(3653465.7266379823).endArray()
+                .startArray().value(-10848084.37780451).value(3864110.0283834795).endArray()
+                .endArray().endArray()
+                .endObject()
+                .endObject()));
+
+        ShapeBuilder query = ShapeBuilder.newEnvelope().topLeft(-97.90, 33.0).bottomRight(-97.4, 30.48);
+
+        // This search would fail if both geoshape indexing and geoshape filtering
+        // used the bottom-level optimization in SpatialPrefixTree#recursiveGetNodes.
+        SearchResponse searchResponse = client().prepareSearch()
+                .setQuery(filteredQuery(matchAllQuery(),
+                        geoIntersectionFilter("location", query)))
+                .execute().actionGet();
+
+        assertSearchResponse(searchResponse);
+        assertThat(searchResponse.getHits().getTotalHits(), equalTo(1l));
+        assertThat(searchResponse.getHits().hits().length, equalTo(1));
+        assertThat(searchResponse.getHits().getAt(0).id(), equalTo("mercator"));
+    }
 }

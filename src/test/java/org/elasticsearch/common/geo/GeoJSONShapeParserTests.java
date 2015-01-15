@@ -960,7 +960,7 @@ public class GeoJSONShapeParserTests extends ElasticsearchTestCase {
     public void testCRSTransform() throws IOException {
         // test 1: valid ccw (right handed system) poly not crossing dateline (with 'right' field)
         String polygonGeoJson = XContentFactory.jsonBuilder().startObject().field("type", "Polygon")
-                .field("orientation", "left")
+                .field("orientation", "right")
                 .startArray("coordinates")
                 .startArray()
                 .startArray().value(575025).value(4138885).endArray()
@@ -999,6 +999,37 @@ public class GeoJSONShapeParserTests extends ElasticsearchTestCase {
         }};
 
         Shape expected = createPolygons(Pair.of(shell, holes));
+        assertGeometryEquals(expected, polygonGeoJson, PROJECTION_TOLERANCE);
+
+        // test #2: mercator map projection test
+        polygonGeoJson = XContentFactory.jsonBuilder().startObject().field("type", "Polygon")
+                .field("orientation", "right")
+                .startArray("coordinates")
+                .startArray()
+                .startArray().value(-10848084.37780451).value(3864110.0283834795).endArray()
+                .startArray().value(-10859216.326883838).value(3870712.7380463844).endArray()
+                .startArray().value(-10892612.174121818).value(3674233.101756766).endArray()
+                .startArray().value(-10846971.182896577).value(3545014.813100937).endArray()
+                .startArray().value(-10845857.987988645).value(3653465.7266379823).endArray()
+                .startArray().value(-10848084.37780451).value(3864110.0283834795).endArray()
+                .endArray()
+                .endArray()
+                .startObject("crs").field("type", "name")
+                .startObject("properties").field("name", "urn:ogc:def:crs:EPSG:1.3:3395")
+                .endObject()
+                .endObject()
+                .endObject()
+                .string();
+
+        shell = new Coordinate[] {
+                new Coordinate(-97.45, 32.94),
+                new Coordinate(-97.55, 32.99),
+                new Coordinate(-97.85, 31.49),
+                new Coordinate(-97.44, 30.49),
+                new Coordinate(-97.43, 31.33)
+        };
+
+        expected = createPolygons(Pair.of(shell, new Coordinate[][]{}));
         assertGeometryEquals(expected, polygonGeoJson, PROJECTION_TOLERANCE);
     }
 

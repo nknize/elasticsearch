@@ -118,12 +118,12 @@ public class ElasticsearchGeoAssertions {
         return isInTol;
     }
 
-    public static void assertEquals(Coordinate c1, Coordinate c2, double tolerance) {
-        assertTrue("expected coordinate " + c1 + " but found " + c2, isInTolerance(c1, c2, tolerance));
-    }
-
     public static void assertEquals(Coordinate c1, Coordinate c2) {
         assertEquals(c1, c2, 0.0);
+    }
+
+    public static void assertEquals(Coordinate c1, Coordinate c2, double tolerance) {
+        assertTrue("expected coordinate " + c1 + " but found " + c2, isInTolerance(c1, c2, tolerance));
     }
 
     private static boolean isRing(Coordinate[] c) {

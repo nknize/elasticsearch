@@ -777,7 +777,7 @@ public abstract class ShapeBuilder implements ToXContent {
             return crs;
         }
 
-        private static String convertToProj4Name(String ogcURN) {
+        public static String convertToProj4Name(String ogcURN) {
             // split on ':'
             String[] ogcParts = ogcURN.split(":");
 
@@ -798,6 +798,17 @@ public abstract class ShapeBuilder implements ToXContent {
             }
 
             return ogcParts[4] + ":" + ogcParts[6];
+        }
+
+        public static void doXContentBody(XContentBuilder builder, CoordinateReferenceSystem crs) throws IOException {
+
+            builder.startObject("crs")
+            .field("type", "name")
+            .startObject("properties")
+            .field("name", "urn:ogc:def:crs:" + crs.getName().replace(":", ":1.3:"))
+            .endObject()
+            .endObject();
+
         }
     }
 
@@ -1065,9 +1076,9 @@ public abstract class ShapeBuilder implements ToXContent {
         }
 
         protected static PolygonBuilder parsePolygon(CoordinateNode coordinates, Orientation orientation, CoordinateReferenceSystem crs) {
-            if (coordinates.children == null || coordinates.children.isEmpty()) {
-                throw new ElasticsearchParseException("Invalid LinearRing provided for type polygon. Linear ring must be an array of " +
-                        "coordinates");
+            if (coordinates.children == null || coordinates.children.isEmpty() ||
+                    coordinates.children.get(0).children == null || coordinates.children.get(0).children.isEmpty() ) {
+                throw new ElasticsearchParseException("Invalid polygon provided. Polygon type must be an array of >=1 LinearRings");
             }
 
             LineStringBuilder shell = parseLinearRing(coordinates.children.get(0), crs);
