@@ -443,7 +443,7 @@ public class GeoShapeIntegrationTests extends ElasticsearchIntegrationTest {
         assertAcked(prepareCreate("crs").addMapping("type1", mapping));
         ensureGreen();
 
-        indexRandom(true, client().prepareIndex("test", "type1", "mercator").setSource(jsonBuilder().startObject()
+        indexRandom(true, client().prepareIndex("crs", "type1", "mercator").setSource(jsonBuilder().startObject()
                 .field("name", "Mercator Test")
                 .startObject("location")
                 .field("type", "polygon")
@@ -451,9 +451,9 @@ public class GeoShapeIntegrationTests extends ElasticsearchIntegrationTest {
                 .startArray().value(-10848084.37780451).value(3864110.0283834795).endArray()
                 .startArray().value(-10859216.326883838).value(3870712.7380463844).endArray()
                 .startArray().value(-10892612.174121818).value(3674233.101756766).endArray()
-                .startArray().value(-10846971.182896577).value(3545014.813100937).endArray() // close the polygon
+                .startArray().value(-10846971.182896577).value(3545014.813100937).endArray()
                 .startArray().value(-10845857.987988645).value(3653465.7266379823).endArray()
-                .startArray().value(-10848084.37780451).value(3864110.0283834795).endArray()
+                .startArray().value(-10848084.37780451).value(3864110.0283834795).endArray() // close the polygon
                 .endArray().endArray()
                 .endObject()
                 .endObject()));
