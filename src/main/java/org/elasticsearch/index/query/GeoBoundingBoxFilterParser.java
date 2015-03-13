@@ -19,6 +19,7 @@
 
 package org.elasticsearch.index.query;
 
+import org.apache.commons.lang3.tuple.Pair;
 import org.apache.lucene.search.Filter;
 import org.apache.lucene.search.FilterCachingPolicy;
 import org.elasticsearch.ElasticsearchParseException;
@@ -75,18 +76,13 @@ public class GeoBoundingBoxFilterParser implements FilterParser {
         FilterCachingPolicy cache = parseContext.autoFilterCachePolicy();
         HashedBytesRef cacheKey = null;
         String fieldName = null;
-
-        double top = Double.NaN;
-        double bottom = Double.NaN;
-        double left = Double.NaN;
-        double right = Double.NaN;
         
         String filterName = null;
         String currentFieldName = null;
         XContentParser.Token token;
         boolean normalize = true;
 
-        GeoPoint sparse = new GeoPoint();
+        Pair<GeoPoint, GeoPoint> bbox = Pair.of(new GeoPoint(), new GeoPoint());
         
         String type = "memory";
 
@@ -102,34 +98,8 @@ public class GeoBoundingBoxFilterParser implements FilterParser {
                         token = parser.nextToken();
                         if (FIELD.equals(currentFieldName)) {
                             fieldName = parser.text();
-                        } else if (TOP.equals(currentFieldName)) {
-                            top = parser.doubleValue();
-                        } else if (BOTTOM.equals(currentFieldName)) {
-                            bottom = parser.doubleValue();
-                        } else if (LEFT.equals(currentFieldName)) {
-                            left = parser.doubleValue();
-                        } else if (RIGHT.equals(currentFieldName)) {
-                            right = parser.doubleValue();
                         } else {
-                            if (TOP_LEFT.equals(currentFieldName) || TOPLEFT.equals(currentFieldName)) {
-                                GeoUtils.parseGeoPoint(parser, sparse);
-                                top = sparse.getLat();
-                                left = sparse.getLon();
-                            } else if (BOTTOM_RIGHT.equals(currentFieldName) || BOTTOMRIGHT.equals(currentFieldName)) {
-                                GeoUtils.parseGeoPoint(parser, sparse);
-                                bottom = sparse.getLat();
-                                right = sparse.getLon();
-                            } else if (TOP_RIGHT.equals(currentFieldName) || TOPRIGHT.equals(currentFieldName)) {
-                                GeoUtils.parseGeoPoint(parser, sparse);
-                                top = sparse.getLat();
-                                right = sparse.getLon();
-                            } else if (BOTTOM_LEFT.equals(currentFieldName) || BOTTOMLEFT.equals(currentFieldName)) {
-                                GeoUtils.parseGeoPoint(parser, sparse);
-                                bottom = sparse.getLat();
-                                left = sparse.getLon();
-                            } else {
-                                throw new ElasticsearchParseException("Unexpected field [" + currentFieldName + "]");
-                            }
+                            GeoBoundingBoxFilterParser.parseCoordinates(currentFieldName, parser, bbox);
                         }
                     } else {
                         throw new ElasticsearchParseException("fieldname expected but [" + token + "] found");
@@ -152,8 +122,11 @@ public class GeoBoundingBoxFilterParser implements FilterParser {
             }
         }
 
-        final GeoPoint topLeft = sparse.reset(top, left);  //just keep the object
-        final GeoPoint bottomRight = new GeoPoint(bottom, right);
+        final GeoPoint topLeft = bbox.getLeft();  //just keep the object
+        final GeoPoint bottomRight = bbox.getRight();
+
+        double right = bottomRight.lon();
+        double left =  topLeft.lon();
 
         if (normalize) {
             // Special case: if the difference bettween the left and right is 360 and the right is greater than the left, we are asking for 
@@ -194,5 +167,32 @@ public class GeoBoundingBoxFilterParser implements FilterParser {
             parseContext.addNamedFilter(filterName, filter);
         }
         return filter;
-    }    
+    }
+
+    public static final Pair<GeoPoint, GeoPoint> parseCoordinates(String currentFieldName, XContentParser parser,
+                                                                  Pair<GeoPoint, GeoPoint> bbox) throws IOException, QueryParsingException {
+        if (TOP.equals(currentFieldName)) {
+            bbox.getLeft().resetLat(parser.doubleValue());
+        } else if (BOTTOM.equals(currentFieldName)) {
+            bbox.getRight().resetLat(parser.doubleValue());
+        } else if (LEFT.equals(currentFieldName)) {
+            bbox.getLeft().resetLon(parser.doubleValue());
+        } else if (RIGHT.equals(currentFieldName)) {
+            bbox.getRight().resetLon(parser.doubleValue());
+        } else {
+            if (TOP_LEFT.equals(currentFieldName) || TOPLEFT.equals(currentFieldName)) {
+                GeoUtils.parseGeoPoint(parser, bbox.getLeft());
+            } else if (BOTTOM_RIGHT.equals(currentFieldName) || BOTTOMRIGHT.equals(currentFieldName)) {
+                GeoUtils.parseGeoPoint(parser, bbox.getRight());
+            } else if (TOP_RIGHT.equals(currentFieldName) || TOPRIGHT.equals(currentFieldName)) {
+                GeoUtils.parseGeoPoint(parser, bbox.getRight());
+            } else if (BOTTOM_LEFT.equals(currentFieldName) || BOTTOMLEFT.equals(currentFieldName)) {
+                GeoUtils.parseGeoPoint(parser, bbox.getLeft());
+            } else {
+                throw new ElasticsearchParseException("Unexpected field [" + currentFieldName + "]");
+            }
+        }
+
+        return bbox;
+    }
 }

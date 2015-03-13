@@ -21,6 +21,8 @@ package org.elasticsearch.common.geo;
 import org.elasticsearch.test.ElasticsearchTestCase;
 import org.junit.Test;
 
+import java.nio.ByteBuffer;
+import java.util.BitSet;
 
 
 /**
@@ -56,4 +58,33 @@ public class GeoHashTests extends ElasticsearchTestCase {
     }
 
 
+    @Test
+    public void testGeohashBoundary() {
+        double lon = 180.0;
+        // double lon = -96.13895416259766;
+        double lat = 32.917349963900215;
+
+        Long geoAsLong = GeoHashUtils.encodeAsLong(lat,lon,12);
+        ByteBuffer bb = ByteBuffer.allocate(Long.BYTES);
+        bb.putLong(geoAsLong);
+        BitSet bs = fromByteArray(bb.array());
+        String geohashFromLong=GeoHashUtils.toString(geoAsLong);
+
+        GeoPoint p = GeoHashUtils.decode(geoAsLong);
+
+        geohashFromLong.concat("");
+
+    }
+
+
+    // Returns a bitset containing the values in bytes.
+    public static BitSet fromByteArray(byte[] bytes) {
+        BitSet bits = new BitSet();
+        for (int i = 0; i < bytes.length * 8; i++) {
+            if ((bytes[bytes.length - i / 8 - 1] & (1 << (i % 8))) > 0) {
+                bits.set(i);
+            }
+        }
+        return bits;
+    }
 }

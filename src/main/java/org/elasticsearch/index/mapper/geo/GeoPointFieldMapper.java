@@ -25,6 +25,7 @@ import com.google.common.base.Objects;
 
 import org.apache.lucene.document.Field;
 import org.apache.lucene.document.FieldType;
+import org.apache.lucene.document.GeoPointField;
 import org.apache.lucene.index.DocValuesType;
 import org.apache.lucene.index.IndexOptions;
 import org.apache.lucene.util.BytesRef;
@@ -110,12 +111,18 @@ public class GeoPointFieldMapper extends AbstractFieldMapper<GeoPoint> implement
         public static final boolean VALIDATE_LAT = true;
         public static final boolean VALIDATE_LON = true;
 
-        public static final FieldType FIELD_TYPE = new FieldType(StringFieldMapper.Defaults.FIELD_TYPE);
+//        public static final FieldType FIELD_TYPE = new FieldType(StringFieldMapper.Defaults.FIELD_TYPE);
+
+//        public static final FieldType FIELD_TYPE = new FieldType(AbstractFieldMapper.Defaults.FIELD_TYPE);
+        public static final FieldType FIELD_TYPE = new FieldType(NumberFieldMapper.Defaults.FIELD_TYPE);
 
         static {
-            FIELD_TYPE.setIndexOptions(IndexOptions.DOCS);
-            FIELD_TYPE.setTokenized(false);
-            FIELD_TYPE.setOmitNorms(true);
+//            FIELD_TYPE.setIndexOptions(IndexOptions.DOCS);
+//            FIELD_TYPE.setTokenized(false);
+//            FIELD_TYPE.setOmitNorms(true);
+//            FIELD_TYPE.setStoreTermVectors(false);
+            FIELD_TYPE.setNumericType(FieldType.NumericType.LONG);
+            FIELD_TYPE.setNumericPrecisionStep(64);
             FIELD_TYPE.freeze();
         }
     }
@@ -210,7 +217,7 @@ public class GeoPointFieldMapper extends AbstractFieldMapper<GeoPoint> implement
 
             // this is important: even if geo points feel like they need to be tokenized to distinguish lat from lon, we actually want to
             // store them as a single token.
-            fieldType.setTokenized(false);
+//            fieldType.setTokenized(true);
 
             return new GeoPointFieldMapper(buildNames(context), fieldType, docValues, indexAnalyzer, searchAnalyzer,
                     similarity, fieldDataSettings, context.indexSettings(), origPathType, enableLatLon, enableGeoHash, enableGeohashPrefix, precisionStep,
@@ -597,7 +604,8 @@ public class GeoPointFieldMapper extends AbstractFieldMapper<GeoPoint> implement
         }
 
         if (fieldType.indexOptions() != IndexOptions.NONE || fieldType.stored()) {
-            Field field = new Field(names.indexName(), Double.toString(point.lat()) + ',' + Double.toString(point.lon()), fieldType);
+//            Field field = new Field(names.indexName(), Double.toString(point.lat()) + ',' + Double.toString(point.lon()), fieldType);
+            GeoPointField field = new GeoPointField(names.indexName(), point.lon(), point.lat(), fieldType);
             context.doc().add(field);
         }
         if (enableGeoHash) {

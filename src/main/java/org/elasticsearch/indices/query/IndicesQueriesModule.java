@@ -103,6 +103,7 @@ public class IndicesQueriesModule extends AbstractModule {
         qpBinders.addBinding().to(FunctionScoreQueryParser.class).asEagerSingleton();
         qpBinders.addBinding().to(SimpleQueryStringParser.class).asEagerSingleton();
         qpBinders.addBinding().to(TemplateQueryParser.class).asEagerSingleton();
+        qpBinders.addBinding().to(GeoBoundingBoxQueryParser.class).asEagerSingleton();
 
         if (ShapesAvailability.JTS_AVAILABLE) {
             qpBinders.addBinding().to(GeoShapeQueryParser.class).asEagerSingleton();

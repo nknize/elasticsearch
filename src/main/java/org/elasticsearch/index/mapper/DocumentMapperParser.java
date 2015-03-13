@@ -51,6 +51,7 @@ import org.elasticsearch.index.mapper.core.ShortFieldMapper;
 import org.elasticsearch.index.mapper.core.StringFieldMapper;
 import org.elasticsearch.index.mapper.core.TokenCountFieldMapper;
 import org.elasticsearch.index.mapper.core.TypeParsers;
+import org.elasticsearch.index.mapper.geo.GeoFieldMapper;
 import org.elasticsearch.index.mapper.geo.GeoPointFieldMapper;
 import org.elasticsearch.index.mapper.geo.GeoShapeFieldMapper;
 import org.elasticsearch.index.mapper.internal.AllFieldMapper;
@@ -125,6 +126,7 @@ public class DocumentMapperParser extends AbstractIndexComponent {
                 .put(TypeParsers.MULTI_FIELD_CONTENT_TYPE, TypeParsers.multiFieldConverterTypeParser)
                 .put(CompletionFieldMapper.CONTENT_TYPE, new CompletionFieldMapper.TypeParser())
                 .put(GeoPointFieldMapper.CONTENT_TYPE, new GeoPointFieldMapper.TypeParser())
+                .put(GeoFieldMapper.CONTENT_TYPE, new GeoFieldMapper.TypeParser())
                 .put(Murmur3FieldMapper.CONTENT_TYPE, new Murmur3FieldMapper.TypeParser());
 
         if (ShapesAvailability.JTS_AVAILABLE) {

@@ -20,6 +20,7 @@
 package org.elasticsearch.index.query;
 
 import org.elasticsearch.common.Nullable;
+import org.elasticsearch.common.geo.GeoPoint;
 import org.elasticsearch.common.geo.builders.ShapeBuilder;
 import org.elasticsearch.index.query.functionscore.FunctionScoreQueryBuilder;
 import org.elasticsearch.index.query.functionscore.ScoreFunctionBuilder;
@@ -614,6 +615,10 @@ public abstract class QueryBuilders {
      */
     public static WrapperQueryBuilder wrapperQuery(byte[] source, int offset, int length) {
         return new WrapperQueryBuilder(source, offset, length);
+    }
+
+    public static GeoBoundingBoxQueryBuilder geoBoundingBoxQuery(String name, GeoPoint topLeft, GeoPoint bottomRight) {
+        return new GeoBoundingBoxQueryBuilder(name, topLeft, bottomRight);
     }
 
     /**
