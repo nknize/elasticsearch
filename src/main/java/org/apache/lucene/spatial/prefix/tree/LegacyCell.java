@@ -17,14 +17,12 @@ package org.apache.lucene.spatial.prefix.tree;
  * limitations under the License.
  */
 
-import com.google.common.primitives.Longs;
 import com.spatial4j.core.shape.Point;
 import com.spatial4j.core.shape.Shape;
 import com.spatial4j.core.shape.SpatialRelation;
 import org.apache.lucene.util.BytesRef;
 import org.apache.lucene.util.StringHelper;
 
-import java.nio.ByteBuffer;
 import java.util.BitSet;
 import java.util.Collection;
 
@@ -37,8 +35,6 @@ public abstract class LegacyCell implements Cell {
   //  LegacySpatialPrefixTree assumes this in its simplify tree logic.
 
   private static final byte LEAF_BYTE = '+';//NOTE: must sort before letters & numbers
-
-  private static ByteBuffer BYTESREF_BUFFER = ByteBuffer.allocate(Long.BYTES);
 
   //Arguably we could simply use a BytesRef, using an extra Object.
   private byte[] bytes;//generally bigger to potentially hold a leaf
@@ -69,7 +65,7 @@ public abstract class LegacyCell implements Cell {
   protected LegacyCell(long code, int len) {
     this.code = code;
     this.b_off = 0;
-    this.bytes = Longs.toByteArray(this.code);  //longAsByteArray(this.code);
+    this.bytes = longToByteArray(this.code);  //longAsByteArray(this.code);
     if (b_len > 8)
       System.out.println("Greater than 8 in code");
     this.b_len = this.bytes.length;
@@ -91,7 +87,7 @@ public abstract class LegacyCell implements Cell {
     this.bytes = bytes.bytes;
     this.b_off = bytes.offset;
     this.b_len = (short) bytes.length;
-    this.code = Longs.fromByteArray(this.bytes);
+    this.code = longFromByteArray(this.bytes);
     if (this.bytes.length > 8)
       System.out.println("Greater than 8 in readCell with code " + this.code);
     readLeafAdjust();
@@ -183,12 +179,32 @@ public abstract class LegacyCell implements Cell {
     if (result == null)
       return new BytesRef(bytes, b_off, b_len);
 
-    result.bytes = Longs.toByteArray(this.code);
+    result.bytes = longToByteArray(this.code);
     result.offset = 0;
     result.length = result.bytes.length;
     if (result.bytes.length > 8)
       System.out.println("GREATER THAN 8 IN NoLeaf!");
     return result;
+  }
+
+  private byte[] longToByteArray(long value) {
+    byte[] result = new byte[8];
+    for(int i = 7; i >= 0; --i) {
+      result[i] = (byte)((int)(value & 255L));
+      value >>= 8;
+    }
+    return result;
+  }
+
+  private long fromBytes(byte b1, byte b2, byte b3, byte b4, byte b5, byte b6, byte b7, byte b8) {
+    return ((long)b1 & 255L) << 56 | ((long)b2 & 255L) << 48 | ((long)b3 & 255L) << 40
+            | ((long)b4 & 255L) << 32 | ((long)b5 & 255L) << 24 | ((long)b6 & 255L) << 16
+            | ((long)b7 & 255L) << 8 | (long)b8 & 255L;
+  }
+
+  private long longFromByteArray(byte[] bytes) {
+    assert bytes.length >= 8;
+    return fromBytes(bytes[0], bytes[1], bytes[2], bytes[3], bytes[4], bytes[5], bytes[6], bytes[7]);
   }
 
  /*private byte[] longAsByteArray(long val) {
