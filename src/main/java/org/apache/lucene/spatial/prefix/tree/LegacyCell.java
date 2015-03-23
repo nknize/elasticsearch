@@ -17,6 +17,7 @@ package org.apache.lucene.spatial.prefix.tree;
  * limitations under the License.
  */
 
+import com.google.common.primitives.Longs;
 import com.spatial4j.core.shape.Point;
 import com.spatial4j.core.shape.Shape;
 import com.spatial4j.core.shape.SpatialRelation;
@@ -60,13 +61,17 @@ public abstract class LegacyCell implements Cell {
     bytes = bs.toByteArray();
     this.b_off = 0;
     this.b_len = bytes.length-1;
+    if (b_len > 8)
+      System.out.println("Greater than 8");
     readLeafAdjust();
   }
 
   protected LegacyCell(long code, int len) {
     this.code = code;
     this.b_off = 0;
-    this.bytes = longAsByteArray(code);
+    this.bytes = Longs.toByteArray(this.code);  //longAsByteArray(this.code);
+    if (b_len > 8)
+      System.out.println("Greater than 8 in code");
     this.b_len = this.bytes.length;
     readLeafAdjust();
   }
@@ -86,15 +91,17 @@ public abstract class LegacyCell implements Cell {
     this.bytes = bytes.bytes;
     this.b_off = bytes.offset;
     this.b_len = (short) bytes.length;
-    this.code = longFromBytes();
+    this.code = Longs.fromByteArray(this.bytes);
+    if (this.bytes.length > 8)
+      System.out.println("Greater than 8 in readCell with code " + this.code);
     readLeafAdjust();
   }
 
-  protected long longFromBytes() {
-    BYTESREF_BUFFER.clear();
-    BYTESREF_BUFFER.put(this.bytes).rewind();
+  /*protected long longFromBytes() {
+    byte[] temp = BYTESREF_BUFFER.array();
+    BYTESREF_BUFFER.wrap(this.bytes);
     return BYTESREF_BUFFER.getLong();
-  }
+  }*/
 
   protected void readLeafAdjust() {
     isLeaf = ((0x1L)&code) == 0x1L;
@@ -102,6 +109,8 @@ public abstract class LegacyCell implements Cell {
 //      b_len--;
     if (getLevel() == getMaxLevels())
       isLeaf = true;
+    if (this.bytes.length > 8)
+      System.out.println("Greater than 8 in readleafAdjust");
   }
 
 //  protected void readLeafAdjust() {
@@ -174,21 +183,26 @@ public abstract class LegacyCell implements Cell {
     if (result == null)
       return new BytesRef(bytes, b_off, b_len);
 
-    result.bytes = longAsByteArray(code);
+    result.bytes = Longs.toByteArray(this.code);
     result.offset = 0;
     result.length = result.bytes.length;
+    if (result.bytes.length > 8)
+      System.out.println("GREATER THAN 8 IN NoLeaf!");
     return result;
   }
 
-  private byte[] longAsByteArray(long val) {
+ /*private byte[] longAsByteArray(long val) {
     BYTESREF_BUFFER.clear();
-    BYTESREF_BUFFER.putLong(code);
-    return BYTESREF_BUFFER.array();
-  }
+    BYTESREF_BUFFER.putLong(0, val);
+    this.bytes = new byte[Long.BYTES];
+    System.arraycopy(BYTESREF_BUFFER.array(), 0, this.bytes, 0, Long.BYTES);
+    return b;
+  }*/
 
   @Override
   public int getLevel() {
-    return ((64-Long.numberOfLeadingZeros(code))>>1)-1;
+    int l = ((64-Long.numberOfLeadingZeros(code))>>1)-1;
+    return l;
 //    return b_len;
   }
 
@@ -258,7 +272,7 @@ public abstract class LegacyCell implements Cell {
   @Override
   public int compareToNoLeaf(Cell fromCell) {
     LegacyCell b = (LegacyCell) fromCell;
-    return compare(bytes, b_off, b_len, b.bytes, b.b_off, b.b_len);
+    return compare(bytes, b_off, b_len, b.bytes, b.b_off, b.b_len)-1;
   }
 
   /** Copied from {@link org.apache.lucene.util.BytesRef#compareTo(org.apache.lucene.util.BytesRef)}.

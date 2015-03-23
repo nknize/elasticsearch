@@ -173,11 +173,11 @@ public abstract class AbstractVisitingPrefixTreeFilter extends AbstractPrefixTre
 
         //Seek to curVNode's cell (or skip if termsEnum has moved beyond)
         final int compare = indexedCell.compareToNoLeaf(curVNode.cell);
-        if (compare < 0) {
+        if (compare > 0) {
           // The indexed cell is after; continue loop to next query cell
           continue;
         }
-        if (compare > 0) {
+        if (compare < 0) {
           // The indexed cell is before; seek ahead to query cell:
           //      Seek !
           curVNode.cell.getTokenBytesNoLeaf(curVNodeTerm);

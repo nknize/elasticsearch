@@ -181,6 +181,8 @@ public class QuadPrefixTree extends LegacyPrefixTree {
 
   private void checkBattenberg(byte quad, double cx, double cy, int level, List<Cell> matches,
                                long code, Shape shape, int maxLevel) {
+    if (shape instanceof Point && !matches.isEmpty())
+        return;
     double w = levelW[level] / 2;
     double h = levelH[level] / 2;
 
@@ -193,6 +195,8 @@ public class QuadPrefixTree extends LegacyPrefixTree {
     // set bits for next level
     code <<= 2;  // shift level bit
     code |= (quad<<1); //((++level<<1)-1));
+
+  //  String cs = longAsString(code);
 
     if (SpatialRelation.CONTAINS == v || (++level >= maxLevel)) {
       matches.add(new QuadCell(code, /*(short)(level++),*/ v.transpose()));
@@ -348,31 +352,14 @@ public class QuadPrefixTree extends LegacyPrefixTree {
 
     @Override
     public String toString() {
-      String s = "";
-        long c = this.code|0x1L;
-        c<<=(Long.numberOfLeadingZeros(c)+1);
-        long l;
-        while((c^0x8000000000000000L) != 0x0L) {
-            l = c&0xC000000000000000L;
-
-            if (l==0x4000000000000000L)
-                s += 'B';
-            else if (l==0x8000000000000000L)
-                s += 'C';
-            else if (l==0xC000000000000000L)
-                s += 'D';
-            else if (l==0)
-                s += 'A';
-            c<<=2;
-        }
-        return s;
-       /*String s = "";
+        //return longAsString(this.code);
+       String s = "";
         for(int i = 0; i < Long.numberOfLeadingZeros(code); i++) {
             s+='0';
         }
         if (code != 0)
             s += Long.toBinaryString(code);
-        return s;*/
+        return s;
     }
 
     private int calcLevel() {
@@ -459,4 +446,24 @@ public class QuadPrefixTree extends LegacyPrefixTree {
 //      return ctx.makeRectangle(xmin, xmin + width, ymin, ymin + height);
 //    }
   }//QuadCell
+
+ /* private String longAsString(long code) {
+      String s = "";
+      long c = code|0x1L;
+      c<<=(Long.numberOfLeadingZeros(c)+1);
+      long l;
+      while((c^0x8000000000000000L) != 0x0L) {
+          l = c&0xC000000000000000L;
+          if (l==0x4000000000000000L)
+              s += 'B';
+          else if (l==0x8000000000000000L)
+              s += 'C';
+          else if (l==0xC000000000000000L)
+              s += 'D';
+          else if (l==0)
+              s += 'A';
+          c<<=2;
+      }
+      return s;
+  }*/
 }
