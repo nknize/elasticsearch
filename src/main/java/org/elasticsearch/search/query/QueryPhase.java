@@ -156,7 +156,6 @@ public class QueryPhase implements SearchPhase {
             }
             searchContext.queryResult().topDocs(topDocs);
         } catch (Throwable e) {
-            e.printStackTrace();
             throw new QueryPhaseExecutionException(searchContext, "Failed to execute main query", e);
         } finally {
             searchContext.searcher().finishStage(ContextIndexSearcher.Stage.MAIN_QUERY);

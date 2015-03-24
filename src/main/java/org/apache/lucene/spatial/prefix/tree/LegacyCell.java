@@ -57,8 +57,6 @@ public abstract class LegacyCell implements Cell {
     bytes = bs.toByteArray();
     this.b_off = 0;
     this.b_len = bytes.length-1;
-    if (b_len > 8)
-      System.out.println("Greater than 8");
     readLeafAdjust();
   }
 
@@ -66,8 +64,6 @@ public abstract class LegacyCell implements Cell {
     this.code = code;
     this.b_off = 0;
     this.bytes = longToByteArray(this.code);  //longAsByteArray(this.code);
-    if (b_len > 8)
-      System.out.println("Greater than 8 in code");
     this.b_len = this.bytes.length;
     readLeafAdjust();
   }
@@ -88,8 +84,6 @@ public abstract class LegacyCell implements Cell {
     this.b_off = bytes.offset;
     this.b_len = (short) bytes.length;
     this.code = longFromByteArray(this.bytes);
-    if (this.bytes.length > 8)
-      System.out.println("Greater than 8 in readCell with code " + this.code);
     readLeafAdjust();
   }
 
@@ -105,8 +99,6 @@ public abstract class LegacyCell implements Cell {
 //      b_len--;
     if (getLevel() == getMaxLevels())
       isLeaf = true;
-    if (this.bytes.length > 8)
-      System.out.println("Greater than 8 in readleafAdjust");
   }
 
 //  protected void readLeafAdjust() {
@@ -182,8 +174,6 @@ public abstract class LegacyCell implements Cell {
     result.bytes = longToByteArray(this.code);
     result.offset = 0;
     result.length = result.bytes.length;
-    if (result.bytes.length > 8)
-      System.out.println("GREATER THAN 8 IN NoLeaf!");
     return result;
   }
 
