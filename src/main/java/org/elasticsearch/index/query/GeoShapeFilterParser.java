@@ -92,6 +92,7 @@ public class GeoShapeFilterParser implements FilterParser {
         String type = null;
         String index = DEFAULTS.INDEX_NAME;
         String shapePath = DEFAULTS.SHAPE_FIELD_NAME;
+        double distanceErrPct = GeoShapeFieldMapper.Defaults.DISTANCE_ERROR_PCT;
 
         XContentParser.Token token;
         String currentFieldName = null;
@@ -114,8 +115,10 @@ public class GeoShapeFilterParser implements FilterParser {
                             if (shapeRelation == null) {
                                 throw new QueryParsingException(parseContext.index(), "Unknown shape operation [" + parser.text() + "]");
                             }
-                        } else if ("strategy".equals(currentFieldName)) {
+                        } else if (GeoShapeFieldMapper.Names.STRATEGY.equals(currentFieldName)) {
                             strategyName = parser.text();
+                        } else if (GeoShapeFieldMapper.Names.DISTANCE_ERROR_PCT.equals(currentFieldName)) {
+                            distanceErrPct = Double.parseDouble(parser.text());
                         } else if ("indexed_shape".equals(currentFieldName) || "indexedShape".equals(currentFieldName)) {
                             while ((token = parser.nextToken()) != XContentParser.Token.END_OBJECT) {
                                 if (token == XContentParser.Token.FIELD_NAME) {
@@ -174,9 +177,9 @@ public class GeoShapeFilterParser implements FilterParser {
         }
 
         GeoShapeFieldMapper shapeFieldMapper = (GeoShapeFieldMapper) fieldMapper;
-        PrefixTreeStrategy strategy = shapeFieldMapper.defaultStrategy();
+        PrefixTreeStrategy strategy = shapeFieldMapper.prefixTreeStrategy();
         if (strategyName != null) {
-            strategy = shapeFieldMapper.resolveStrategy(strategyName);
+            strategy = shapeFieldMapper.resolveStrategy(strategyName, strategy.getGrid(), strategy.getFieldName(), distanceErrPct);
         }
         
         Filter filter;

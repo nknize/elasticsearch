@@ -71,6 +71,7 @@ public class GeoShapeQueryParser implements QueryParser {
         String type = null;
         String index = DEFAULTS.INDEX_NAME;
         String shapePath = DEFAULTS.SHAPE_FIELD_NAME;
+        double distanceErrPct = GeoShapeFieldMapper.Defaults.DISTANCE_ERROR_PCT;
 
         XContentParser.Token token;
         String currentFieldName = null;
@@ -91,6 +92,8 @@ public class GeoShapeQueryParser implements QueryParser {
                             shape = ShapeBuilder.parse(parser);
                         } else if ("strategy".equals(currentFieldName)) {
                             strategyName = parser.text();
+                        } else if (GeoShapeFieldMapper.Names.DISTANCE_ERROR_PCT.equals(currentFieldName)) {
+                            distanceErrPct = Double.parseDouble(parser.text());
                         } else if ("relation".equals(currentFieldName)) {
                             shapeRelation = ShapeRelation.getRelationByName(parser.text());
                             if (shapeRelation == null) {
@@ -153,9 +156,9 @@ public class GeoShapeQueryParser implements QueryParser {
 
         GeoShapeFieldMapper shapeFieldMapper = (GeoShapeFieldMapper) fieldMapper;
 
-        PrefixTreeStrategy strategy = shapeFieldMapper.defaultStrategy();
+        PrefixTreeStrategy strategy = shapeFieldMapper.prefixTreeStrategy();
         if (strategyName != null) {
-            strategy = shapeFieldMapper.resolveStrategy(strategyName);
+            strategy = shapeFieldMapper.resolveStrategy(strategyName, strategy.getGrid(), strategy.getFieldName(), distanceErrPct);
         }
         Query query;
         if (strategy instanceof RecursivePrefixTreeStrategy && shapeRelation == ShapeRelation.DISJOINT) {

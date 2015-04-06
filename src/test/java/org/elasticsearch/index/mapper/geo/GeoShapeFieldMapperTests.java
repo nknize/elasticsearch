@@ -50,7 +50,7 @@ public class GeoShapeFieldMapperTests extends ElasticsearchSingleNodeTest {
         assertThat(fieldMapper, instanceOf(GeoShapeFieldMapper.class));
 
         GeoShapeFieldMapper geoShapeFieldMapper = (GeoShapeFieldMapper) fieldMapper;
-        PrefixTreeStrategy strategy = geoShapeFieldMapper.defaultStrategy();
+        PrefixTreeStrategy strategy = geoShapeFieldMapper.prefixTreeStrategy();
 
         assertThat(strategy.getDistErrPct(), equalTo(GeoShapeFieldMapper.Defaults.DISTANCE_ERROR_PCT));
         assertThat(strategy.getGrid(), instanceOf(GeohashPrefixTree.class));
@@ -113,7 +113,7 @@ public class GeoShapeFieldMapperTests extends ElasticsearchSingleNodeTest {
         assertThat(fieldMapper, instanceOf(GeoShapeFieldMapper.class));
 
         GeoShapeFieldMapper geoShapeFieldMapper = (GeoShapeFieldMapper) fieldMapper;
-        PrefixTreeStrategy strategy = geoShapeFieldMapper.defaultStrategy();
+        PrefixTreeStrategy strategy = geoShapeFieldMapper.prefixTreeStrategy();
 
         assertThat(strategy.getDistErrPct(), equalTo(0.1));
         assertThat(strategy.getGrid(), instanceOf(GeohashPrefixTree.class));
@@ -136,7 +136,7 @@ public class GeoShapeFieldMapperTests extends ElasticsearchSingleNodeTest {
         assertThat(fieldMapper, instanceOf(GeoShapeFieldMapper.class));
 
         GeoShapeFieldMapper geoShapeFieldMapper = (GeoShapeFieldMapper) fieldMapper;
-        PrefixTreeStrategy strategy = geoShapeFieldMapper.defaultStrategy();
+        PrefixTreeStrategy strategy = geoShapeFieldMapper.prefixTreeStrategy();
 
         assertThat(strategy.getDistErrPct(), equalTo(0.5));
         assertThat(strategy.getGrid(), instanceOf(QuadPrefixTree.class));
@@ -164,7 +164,7 @@ public class GeoShapeFieldMapperTests extends ElasticsearchSingleNodeTest {
             assertThat(fieldMapper, instanceOf(GeoShapeFieldMapper.class));
 
             GeoShapeFieldMapper geoShapeFieldMapper = (GeoShapeFieldMapper) fieldMapper;
-            PrefixTreeStrategy strategy = geoShapeFieldMapper.defaultStrategy();
+            PrefixTreeStrategy strategy = geoShapeFieldMapper.prefixTreeStrategy();
 
             assertThat(strategy.getDistErrPct(), equalTo(0.5));
             assertThat(strategy.getGrid(), instanceOf(QuadPrefixTree.class));
@@ -188,7 +188,7 @@ public class GeoShapeFieldMapperTests extends ElasticsearchSingleNodeTest {
             assertThat(fieldMapper, instanceOf(GeoShapeFieldMapper.class));
 
             GeoShapeFieldMapper geoShapeFieldMapper = (GeoShapeFieldMapper) fieldMapper;
-            PrefixTreeStrategy strategy = geoShapeFieldMapper.defaultStrategy();
+            PrefixTreeStrategy strategy = geoShapeFieldMapper.prefixTreeStrategy();
 
             assertThat(strategy.getDistErrPct(), equalTo(0.5));
             assertThat(strategy.getGrid(), instanceOf(GeohashPrefixTree.class));
@@ -212,7 +212,7 @@ public class GeoShapeFieldMapperTests extends ElasticsearchSingleNodeTest {
             assertThat(fieldMapper, instanceOf(GeoShapeFieldMapper.class));
 
             GeoShapeFieldMapper geoShapeFieldMapper = (GeoShapeFieldMapper) fieldMapper;
-            PrefixTreeStrategy strategy = geoShapeFieldMapper.defaultStrategy();
+            PrefixTreeStrategy strategy = geoShapeFieldMapper.prefixTreeStrategy();
 
             assertThat(strategy.getDistErrPct(), equalTo(0.5));
             assertThat(strategy.getGrid(), instanceOf(GeohashPrefixTree.class));
@@ -235,7 +235,7 @@ public class GeoShapeFieldMapperTests extends ElasticsearchSingleNodeTest {
             assertThat(fieldMapper, instanceOf(GeoShapeFieldMapper.class));
 
             GeoShapeFieldMapper geoShapeFieldMapper = (GeoShapeFieldMapper) fieldMapper;
-            PrefixTreeStrategy strategy = geoShapeFieldMapper.defaultStrategy();
+            PrefixTreeStrategy strategy = geoShapeFieldMapper.prefixTreeStrategy();
 
             assertThat(strategy.getDistErrPct(), equalTo(0.5));
             assertThat(strategy.getGrid(), instanceOf(QuadPrefixTree.class));
@@ -261,7 +261,7 @@ public class GeoShapeFieldMapperTests extends ElasticsearchSingleNodeTest {
             assertThat(fieldMapper, instanceOf(GeoShapeFieldMapper.class));
 
             GeoShapeFieldMapper geoShapeFieldMapper = (GeoShapeFieldMapper) fieldMapper;
-            PrefixTreeStrategy strategy = geoShapeFieldMapper.defaultStrategy();
+            PrefixTreeStrategy strategy = geoShapeFieldMapper.prefixTreeStrategy();
 
             assertThat(strategy.getDistErrPct(), equalTo(0.5));
             assertThat(strategy.getGrid(), instanceOf(QuadPrefixTree.class));
@@ -283,7 +283,7 @@ public class GeoShapeFieldMapperTests extends ElasticsearchSingleNodeTest {
             assertThat(fieldMapper, instanceOf(GeoShapeFieldMapper.class));
 
             GeoShapeFieldMapper geoShapeFieldMapper = (GeoShapeFieldMapper) fieldMapper;
-            PrefixTreeStrategy strategy = geoShapeFieldMapper.defaultStrategy();
+            PrefixTreeStrategy strategy = geoShapeFieldMapper.prefixTreeStrategy();
 
             assertThat(strategy.getDistErrPct(), equalTo(0.5));
             assertThat(strategy.getGrid(), instanceOf(GeohashPrefixTree.class));
