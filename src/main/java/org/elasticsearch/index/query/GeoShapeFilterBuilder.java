@@ -20,7 +20,7 @@
 package org.elasticsearch.index.query;
 
 import org.elasticsearch.common.geo.ShapeRelation;
-import org.elasticsearch.common.geo.SpatialStrategy;
+import org.elasticsearch.index.mapper.geo.GeoShapeFieldMapper.SpatialStrategy;
 import org.elasticsearch.common.geo.builders.ShapeBuilder;
 import org.elasticsearch.common.xcontent.XContentBuilder;
 

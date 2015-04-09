@@ -396,7 +396,7 @@ public class BloomFilterPostingsFormat extends PostingsFormat {
                         break;
                     }
                     if (bloomFilter == null) {
-                        bloomFilter = bloomFilterFactory.createFilter(state.segmentInfo.maxDoc());
+                        bloomFilter = bloomFilterFactory.createFilter(state.segmentInfo.getDocCount());
                         assert bloomFilters.containsKey(field) == false;
                         bloomFilters.put(fieldInfo, bloomFilter);
                     }
