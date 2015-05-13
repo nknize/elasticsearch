@@ -136,7 +136,7 @@ public class GeoBoundingBoxQueryBuilder extends QueryBuilder {
 
     /**
      * Sets the type of executing of the geo bounding box. Can be either `memory` or `indexed`. Defaults
-     * to `memory`.
+     * to `indexed`.
      */
     public GeoBoundingBoxQueryBuilder type(String type) {
         this.type = type;
