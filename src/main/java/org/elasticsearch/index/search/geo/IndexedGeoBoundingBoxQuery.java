@@ -19,9 +19,7 @@
 
 package org.elasticsearch.index.search.geo;
 
-import org.apache.lucene.search.BooleanClause.Occur;
-import org.apache.lucene.search.BooleanQuery;
-import org.apache.lucene.search.ConstantScoreQuery;
+import org.apache.lucene.search.GeoPointInBBoxQuery;
 import org.apache.lucene.search.Query;
 import org.elasticsearch.common.geo.GeoPoint;
 import org.elasticsearch.index.mapper.geo.GeoPointFieldMapper;
@@ -31,9 +29,9 @@ import org.elasticsearch.index.mapper.geo.GeoPointFieldMapper;
 public class IndexedGeoBoundingBoxQuery {
 
     public static Query create(GeoPoint topLeft, GeoPoint bottomRight, GeoPointFieldMapper fieldMapper) {
-        if (!fieldMapper.isEnableLatLon()) {
-            throw new IllegalArgumentException("lat/lon is not enabled (indexed) for field [" + fieldMapper.name() + "], can't use indexed filter on it");
-        }
+//        if (!fieldMapper.isEnableLatLon()) {
+//            throw new IllegalArgumentException("lat/lon is not enabled (indexed) for field [" + fieldMapper.name() + "], can't use indexed filter on it");
+//        }
         //checks to see if bounding box crosses 180 degrees
         if (topLeft.lon() > bottomRight.lon()) {
             return westGeoBoundingBoxFilter(topLeft, bottomRight, fieldMapper);
@@ -42,19 +40,42 @@ public class IndexedGeoBoundingBoxQuery {
         }
     }
 
+//<<<<<<< HEAD:src/main/java/org/elasticsearch/index/search/geo/IndexedGeoBoundingBoxQuery.java
+//    private static Query westGeoBoundingBoxFilter(GeoPoint topLeft, GeoPoint bottomRight, GeoPointFieldMapper fieldMapper) {
+//        BooleanQuery filter = new BooleanQuery();
+//        filter.setMinimumNumberShouldMatch(1);
+//        filter.add(fieldMapper.lonMapper().rangeFilter(null, bottomRight.lon(), true, true), Occur.SHOULD);
+//        filter.add(fieldMapper.lonMapper().rangeFilter(topLeft.lon(), null, true, true), Occur.SHOULD);
+//        filter.add(fieldMapper.latMapper().rangeFilter(bottomRight.lat(), topLeft.lat(), true, true), Occur.MUST);
+//        return new ConstantScoreQuery(filter);
+//    }
+//
+//    private static Query eastGeoBoundingBoxFilter(GeoPoint topLeft, GeoPoint bottomRight, GeoPointFieldMapper fieldMapper) {
+//        BooleanQuery filter = new BooleanQuery();
+//        filter.add(fieldMapper.lonMapper().rangeFilter(topLeft.lon(), bottomRight.lon(), true, true), Occur.MUST);
+//        filter.add(fieldMapper.latMapper().rangeFilter(bottomRight.lat(), topLeft.lat(), true, true), Occur.MUST);
+//        return new ConstantScoreQuery(filter);
+//=======
     private static Query westGeoBoundingBoxFilter(GeoPoint topLeft, GeoPoint bottomRight, GeoPointFieldMapper fieldMapper) {
-        BooleanQuery filter = new BooleanQuery();
-        filter.setMinimumNumberShouldMatch(1);
-        filter.add(fieldMapper.lonMapper().rangeFilter(null, bottomRight.lon(), true, true), Occur.SHOULD);
-        filter.add(fieldMapper.lonMapper().rangeFilter(topLeft.lon(), null, true, true), Occur.SHOULD);
-        filter.add(fieldMapper.latMapper().rangeFilter(bottomRight.lat(), topLeft.lat(), true, true), Occur.MUST);
-        return new ConstantScoreQuery(filter);
+        GeoPointInBBoxQuery bboxQuery = new GeoPointInBBoxQuery(fieldMapper.name(), topLeft.lon(), bottomRight.lat(),
+                bottomRight
+                .lon(), topLeft.lat());
+
+//        BooleanQuery filter = new BooleanQuery();
+//        filter.setMinimumNumberShouldMatch(1);
+//        filter.add(fieldMapper.lonMapper().rangeFilter(null, bottomRight.lon(), true, true), Occur.SHOULD);
+//        filter.add(fieldMapper.lonMapper().rangeFilter(topLeft.lon(), null, true, true), Occur.SHOULD);
+//        filter.add(fieldMapper.latMapper().rangeFilter(bottomRight.lat(), topLeft.lat(), true, true), Occur.MUST);
+        return bboxQuery;
     }
 
     private static Query eastGeoBoundingBoxFilter(GeoPoint topLeft, GeoPoint bottomRight, GeoPointFieldMapper fieldMapper) {
-        BooleanQuery filter = new BooleanQuery();
-        filter.add(fieldMapper.lonMapper().rangeFilter(topLeft.lon(), bottomRight.lon(), true, true), Occur.MUST);
-        filter.add(fieldMapper.latMapper().rangeFilter(bottomRight.lat(), topLeft.lat(), true, true), Occur.MUST);
-        return new ConstantScoreQuery(filter);
+        GeoPointInBBoxQuery bboxQuery = new GeoPointInBBoxQuery(fieldMapper.name(), topLeft.lon(), bottomRight.lat(),
+                bottomRight.lon(),
+                topLeft.lat());
+//        BooleanQuery filter = new BooleanQuery();
+//        filter.add(fieldMapper.lonMapper().rangeFilter(topLeft.lon(), bottomRight.lon(), true, true), Occur.MUST);
+//        filter.add(fieldMapper.latMapper().rangeFilter(bottomRight.lat(), topLeft.lat(), true, true), Occur.MUST);
+        return bboxQuery;
     }
 }

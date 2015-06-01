@@ -25,6 +25,7 @@ import com.google.common.base.Objects;
 import com.google.common.collect.Iterators;
 import org.apache.lucene.document.Field;
 import org.apache.lucene.document.FieldType;
+import org.apache.lucene.document.GeoPointField;
 import org.apache.lucene.index.DocValuesType;
 import org.apache.lucene.index.IndexOptions;
 import org.apache.lucene.util.BytesRef;
@@ -107,14 +108,15 @@ public class GeoPointFieldMapper extends AbstractFieldMapper implements ArrayVal
         public static final boolean VALIDATE_LAT = true;
         public static final boolean VALIDATE_LON = true;
 
-        public static final FieldType FIELD_TYPE = new FieldType(StringFieldMapper.Defaults.FIELD_TYPE);
+//        public static final FieldType FIELD_TYPE = new FieldType(StringFieldMapper.Defaults.FIELD_TYPE);
+        public static final FieldType FIELD_TYPE = GeoPointField.TYPE_STORED;
 
-        static {
-            FIELD_TYPE.setIndexOptions(IndexOptions.DOCS);
-            FIELD_TYPE.setTokenized(false);
-            FIELD_TYPE.setOmitNorms(true);
-            FIELD_TYPE.freeze();
-        }
+//        static {
+//            FIELD_TYPE.setIndexOptions(IndexOptions.DOCS);
+//            FIELD_TYPE.setTokenized(false);
+//            FIELD_TYPE.setOmitNorms(true);
+//            FIELD_TYPE.freeze();
+//        }
     }
 
     public static class Builder extends AbstractFieldMapper.Builder<Builder, GeoPointFieldMapper> {
@@ -600,7 +602,8 @@ public class GeoPointFieldMapper extends AbstractFieldMapper implements ArrayVal
         }
 
         if (fieldType.indexOptions() != IndexOptions.NONE || fieldType.stored()) {
-            Field field = new Field(names.indexName(), Double.toString(point.lat()) + ',' + Double.toString(point.lon()), fieldType);
+//            Field field = new Field(names.indexName(), Double.toString(point.lat()) + ',' + Double.toString(point.lon()), fieldType);
+            GeoPointField field = new GeoPointField(names.indexName(), point.lon(), point.lat(), fieldType);
             context.doc().add(field);
         }
         if (enableGeoHash) {
