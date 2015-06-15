@@ -19,13 +19,8 @@
 
 package org.apache.lucene.search;
 
-import org.apache.lucene.index.Terms;
-import org.apache.lucene.index.TermsEnum;
-import org.apache.lucene.util.AttributeSource;
-import org.apache.lucene.util.GeoUtils;
+import org.apache.lucene.index.IndexReader;
 import org.apache.lucene.util.ToStringUtils;
-
-import java.io.IOException;
 
 /** Implements a simple bounding box query on a GeoPoint field. This is inspired by
  * {@link org.apache.lucene.search.NumericRangeQuery} and is implemented using a
@@ -46,77 +41,35 @@ import java.io.IOException;
  *
  * @lucene.experimental
  */
-public class GeoPointInBBoxQuery extends MultiTermQuery {
-  // simple bounding box optimization - no objects used to avoid dependencies
+public class GeoPointInBBoxQuery extends Query {
+  protected final String field;
   protected final double minLon;
   protected final double minLat;
   protected final double maxLon;
   protected final double maxLat;
 
-  /**
-   * Constructs a new GeoBBoxQuery that will match encoded GeoPoint terms that fall within or on the boundary
-   * of the bounding box defined by the input parameters
-   * @param field the field name
-   * @param minLon lower longitude (x) value of the bounding box
-   * @param minLat lower latitude (y) value of the bounding box
-   * @param maxLon upper longitude (x) value of the bounding box
-   * @param maxLat upper latitude (y) value of the bounding box
-   */
   public GeoPointInBBoxQuery(final String field, final double minLon, final double minLat, final double maxLon, final double maxLat) {
-    super(field);
-    if (GeoUtils.isValidLon(minLon) == false) {
-      throw new IllegalArgumentException("invalid minLon " + minLon);
-    }
-    if (GeoUtils.isValidLon(maxLon) == false) {
-      throw new IllegalArgumentException("invalid maxLon " + maxLon);
-    }
-    if (GeoUtils.isValidLat(minLat) == false) {
-      throw new IllegalArgumentException("invalid minLat " + minLat);
-    }
-    if (GeoUtils.isValidLat(maxLat) == false) {
-      throw new IllegalArgumentException("invalid maxLat " + maxLat);
-    }
+    this.field = field;
     this.minLon = minLon;
     this.minLat = minLat;
     this.maxLon = maxLon;
     this.maxLat = maxLat;
   }
 
-  @Override @SuppressWarnings("unchecked")
-  protected TermsEnum getTermsEnum(final Terms terms, AttributeSource atts) throws IOException {
-    return new GeoPointTermsEnum(terms.iterator(), atts, minLon, minLat, maxLon, maxLat);
-  }
-
   @Override
-  @SuppressWarnings({"unchecked","rawtypes"})
-  public boolean equals(Object o) {
-    if (this == o) return true;
-    if (o == null || getClass() != o.getClass()) return false;
-    if (!super.equals(o)) return false;
+  public Query rewrite(IndexReader reader) {
+    if (maxLon < minLon) {
+      BooleanQuery q = new BooleanQuery(true);
 
-    GeoPointInBBoxQuery that = (GeoPointInBBoxQuery) o;
-
-    if (Double.compare(that.maxLat, maxLat) != 0) return false;
-    if (Double.compare(that.maxLon, maxLon) != 0) return false;
-    if (Double.compare(that.minLat, minLat) != 0) return false;
-    if (Double.compare(that.minLon, minLon) != 0) return false;
-
-    return true;
-  }
-
-  @Override
-  public int hashCode() {
-    int result = super.hashCode();
-    long temp;
-    temp = Double.doubleToLongBits(minLon);
-    result = 31 * result + (int) (temp ^ (temp >>> 32));
-    temp = Double.doubleToLongBits(minLat);
-    result = 31 * result + (int) (temp ^ (temp >>> 32));
-    temp = Double.doubleToLongBits(maxLon);
-    result = 31 * result + (int) (temp ^ (temp >>> 32));
-    temp = Double.doubleToLongBits(maxLat);
-    result = 31 * result + (int) (temp ^ (temp >>> 32));
-    return result;
+      GeoPointInBBoxQueryImpl left = new GeoPointInBBoxQueryImpl(field, -180.0D, minLat, -179.0D, maxLat);
+      left.setBoost(getBoost());
+      q.add(new BooleanClause(left, BooleanClause.Occur.SHOULD));
+      GeoPointInBBoxQueryImpl right = new GeoPointInBBoxQueryImpl(field, minLon, minLat, 180.0D, maxLat);
+      right.setBoost(getBoost());
+      q.add(new BooleanClause(right, BooleanClause.Occur.SHOULD));
+      return q;
+    }
+    return new GeoPointInBBoxQueryImpl(field, minLon, minLat, maxLon, maxLat);
   }
 
   @Override
@@ -124,9 +77,9 @@ public class GeoPointInBBoxQuery extends MultiTermQuery {
     final StringBuilder sb = new StringBuilder();
     sb.append(getClass().getSimpleName());
     sb.append(':');
-    if (!getField().equals(field)) {
+    if (!this.field.equals(field)) {
       sb.append(" field=");
-      sb.append(getField());
+      sb.append(this.field);
       sb.append(':');
     }
     return sb.append(" Lower Left: [")
@@ -141,5 +94,38 @@ public class GeoPointInBBoxQuery extends MultiTermQuery {
         .append("]")
         .append(ToStringUtils.boost(getBoost()))
         .toString();
+  }
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) return true;
+    if (!(o instanceof GeoPointInBBoxQuery)) return false;
+    if (!super.equals(o)) return false;
+
+    GeoPointInBBoxQuery that = (GeoPointInBBoxQuery) o;
+
+    if (Double.compare(that.maxLat, maxLat) != 0) return false;
+    if (Double.compare(that.maxLon, maxLon) != 0) return false;
+    if (Double.compare(that.minLat, minLat) != 0) return false;
+    if (Double.compare(that.minLon, minLon) != 0) return false;
+    if (!field.equals(that.field)) return false;
+
+    return true;
+  }
+
+  @Override
+  public int hashCode() {
+    int result = super.hashCode();
+    long temp;
+    result = 31 * result + field.hashCode();
+    temp = Double.doubleToLongBits(minLon);
+    result = 31 * result + (int) (temp ^ (temp >>> 32));
+    temp = Double.doubleToLongBits(minLat);
+    result = 31 * result + (int) (temp ^ (temp >>> 32));
+    temp = Double.doubleToLongBits(maxLon);
+    result = 31 * result + (int) (temp ^ (temp >>> 32));
+    temp = Double.doubleToLongBits(maxLat);
+    result = 31 * result + (int) (temp ^ (temp >>> 32));
+    return result;
   }
 }

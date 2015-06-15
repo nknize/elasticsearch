@@ -50,58 +50,16 @@ public final class GeoUtils {
   private GeoUtils() {
   }
 
-  // magic numbers for bit interleaving
-  private static final long MAGIC[] = {
-          0x5555555555555555L, 0x3333333333333333L,
-          0x0F0F0F0F0F0F0F0FL, 0x00FF00FF00FF00FFL,
-          0x0000FFFF0000FFFFL, 0x00000000FFFFFFFFL
-  };
-  // shift values for bit interleaving
-  private static final short SHIFT[] = {1, 2, 4, 8, 16};
-
-  /**
-   * Interleaves the first 32 bits of each long value
-   *
-   * Adapted from: http://graphics.stanford.edu/~seander/bithacks.html#InterleaveBMN
-   */
-  public static long interleave(long v1, long v2) {
-    v1 = (v1 | (v1 << SHIFT[4])) & MAGIC[4];
-    v1 = (v1 | (v1 << SHIFT[3])) & MAGIC[3];
-    v1 = (v1 | (v1 << SHIFT[2])) & MAGIC[2];
-    v1 = (v1 | (v1 << SHIFT[1])) & MAGIC[1];
-    v1 = (v1 | (v1 << SHIFT[0])) & MAGIC[0];
-    v2 = (v2 | (v2 << SHIFT[4])) & MAGIC[4];
-    v2 = (v2 | (v2 << SHIFT[3])) & MAGIC[3];
-    v2 = (v2 | (v2 << SHIFT[2])) & MAGIC[2];
-    v2 = (v2 | (v2 << SHIFT[1])) & MAGIC[1];
-    v2 = (v2 | (v2 << SHIFT[0])) & MAGIC[0];
-
-    return (v2<<1) | v1;
-  }
-
-  /**
-   * Deinterleaves long value back to two concatenated 32bit values
-   */
-  public static long deinterleave(long b) {
-    b &= MAGIC[0];
-    b = (b ^ (b >>> SHIFT[0])) & MAGIC[1];
-    b = (b ^ (b >>> SHIFT[1])) & MAGIC[2];
-    b = (b ^ (b >>> SHIFT[2])) & MAGIC[3];
-    b = (b ^ (b >>> SHIFT[3])) & MAGIC[4];
-    b = (b ^ (b >>> SHIFT[4])) & MAGIC[5];
-    return b;
-  }
-
   public static final Long mortonHash(final double lon, final double lat) {
-    return interleave(scaleLon(lon), scaleLat(lat));
+    return BitUtil.interleave(scaleLon(lon), scaleLat(lat));
   }
 
   public static final double mortonUnhashLon(final long hash) {
-    return unscaleLon(deinterleave(hash));
+    return unscaleLon(BitUtil.deinterleave(hash));
   }
 
   public static final double mortonUnhashLat(final long hash) {
-    return unscaleLat(deinterleave(hash >>> 1));
+    return unscaleLat(BitUtil.deinterleave(hash >>> 1));
   }
 
   private static long scaleLon(final double val) {
@@ -355,20 +313,6 @@ public final class GeoUtils {
   }
 
   /**
-   * Computes whether a line crosses a circle. That is, one point is inside and one is outside, or the line is a secant
-   */
-  private static boolean lineCrossesCircle(final double x1, final double y1, final double x2, final double y2,
-                                           final double centerX, final double centerY, final double radius) {
-    if (isSecant(x1, y1, x2, y2, centerX, centerY, radius))
-      return true;
-
-    // distance in km
-    final double d1 = SloppyMath.haversin(centerY, centerX, y1, x1);
-    final double d2 = SloppyMath.haversin(centerY, centerX, y2, x2);
-    return  (d1 < radius && d2 > radius) || (d2 < radius && d1 > radius);
-  }
-
-  /**
    * Computes whether or a 3dimensional line segment intersects or crosses a sphere
    *
    * @param lon1 longitudinal location of the line segment start point (in degrees)
@@ -412,15 +356,17 @@ public final class GeoUtils {
     final double t1 = (-b - discrim)/a2;
     final double t2 = (-b + discrim)/a2;
 
-
     if ( (t1 < 0 || t1 > 1) )
       return !(t2 < 0 || t2 > 1);
 
     return true;
   }
 
-  private static boolean isSecant(final double x1, final double y1, final double x2, final double y2,
-                                  final double centerX, final double centerY, final double radius) {
+  /**
+   * Computes whether a line crosses a circle. That is, one point is inside and one is outside, or the line is a secant
+   */
+  private static boolean lineCrossesCircle(final double x1, final double y1, final double x2, final double y2,
+                                           final double centerX, final double centerY, final double radius) {
     final double dX = x2 - x1;
     final double dY = y2 - y1;
     final double fX = x1 - centerX;

@@ -29,18 +29,17 @@ class GeoBoundingBox {
   public final double maxLat;
 
   public GeoBoundingBox(double minLon, double maxLon, double minLat, double maxLat) {
-    // normalize the bounding box coordinates
     if (GeoUtils.isValidLon(minLon) == false) {
-      minLon = GeoUtils.normalizeLon(minLon);
+      throw new IllegalArgumentException("invalid minLon " + minLon);
     }
     if (GeoUtils.isValidLon(maxLon) == false) {
-      maxLon = GeoUtils.normalizeLon(maxLon);
+      throw new IllegalArgumentException("invalid maxLon " + minLon);
     }
     if (GeoUtils.isValidLat(minLat) == false) {
-      minLat = GeoUtils.normalizeLat(minLat);
+      throw new IllegalArgumentException("invalid minLat " + minLat);
     }
     if (GeoUtils.isValidLat(maxLat) == false) {
-      maxLat = GeoUtils.normalizeLat(maxLat);
+      throw new IllegalArgumentException("invalid maxLat " + minLat);
     }
     this.minLon = minLon;
     this.maxLon = maxLon;

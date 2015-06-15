@@ -19,26 +19,21 @@
 
 package org.apache.lucene.search;
 
-import org.apache.lucene.index.FilteredTermsEnum;
-import org.apache.lucene.index.Terms;
-import org.apache.lucene.index.TermsEnum;
-import org.apache.lucene.util.AttributeSource;
-import org.apache.lucene.util.BytesRef;
+import org.apache.lucene.index.IndexReader;
 import org.apache.lucene.util.GeoDistanceUtils;
 import org.apache.lucene.util.GeoUtils;
-import org.apache.lucene.util.NumericUtils;
-import org.apache.lucene.util.SloppyMath;
-
-import java.io.IOException;
+import org.apache.lucene.util.ToStringUtils;
 
 /** Implements a simple point distance query on a GeoPoint field. This is based on
- * {@link GeoPointInPolygonQuery} and is implemented using a two phase approach. First,
- * like {@link GeoPointInBBoxQuery} candidate terms are queried using the numeric ranges based on
- * the morton codes of the min and max lat/lon pairs that intersect a polygonal representation of the
- * circle (see {@link org.apache.lucene.util.GeoUtils#circleToPoly}. Terms
+ * {@link org.apache.lucene.search.GeoPointInBBoxQuery} and is implemented using a two phase approach. First,
+ * like {@link GeoPointInBBoxQueryImpl} candidate terms are queried using the numeric ranges based on
+ * the morton codes of the min and max lat/lon pairs that intersect the boundary of the point-radius
+ * circle (see {@link org.apache.lucene.util.GeoUtils#lineCrossesPointRadius}. Terms
  * passing this initial filter are then passed to a secondary filter that verifies whether the
- * decoded lat/lon point fall within the specified query distance. All value comparisons are subject
- * to the same precision tolerance defined in {@value org.apache.lucene.util.GeoUtils#TOLERANCE}
+ * decoded lat/lon point fall within the specified query distance (see {@link org.apache.lucene.util.SloppyMath#haversin}.
+ * All morton value comparisons are subject to the same precision tolerance defined in
+ * {@value org.apache.lucene.util.GeoUtils#TOLERANCE} and distance comparisons are subject to the accuracy of the
+ * haversine formula (from R.W. Sinnott, "Virtues of the Haversine", Sky and Telescope, vol. 68, no. 2, 1984, p. 159)
  *
  * NOTE: This query works best for point-radius queries that do not cross the dateline, there is a penalty for crossing
  * the dateline as the bounding box is effectively split into two separate queries, and the point-radius is converted
@@ -49,80 +44,106 @@ import java.io.IOException;
  *
  *    @lucene.experimental
  */
-public class GeoPointDistanceQuery extends GeoPointInBBoxQuery {
-  private final double centerLon;
-  private final double centerLat;
-  private final double radius;
+public final class GeoPointDistanceQuery extends GeoPointInBBoxQuery {
+  protected final double centerLon;
+  protected final double centerLat;
+  protected final double radius;
 
-  public GeoPointDistanceQuery(final String field, final double centerLon, final double centerLat, final double radius) {
+  GeoPointDistanceQuery(final String field, final double centerLon, final double centerLat, final double radius) {
     this(field, computeBBox(centerLon, centerLat, radius), centerLon, centerLat, radius);
   }
 
   private GeoPointDistanceQuery(final String field, GeoBoundingBox bbox, final double centerLon,
-                                final double centerLat, final double radius) {
+                                         final double centerLat, final double radius) {
     super(field, bbox.minLon, bbox.minLat, bbox.maxLon, bbox.maxLat);
     this.centerLon = centerLon;
     this.centerLat = centerLat;
     this.radius = radius;
   }
 
-  @Override @SuppressWarnings("unchecked")
-  protected TermsEnum getTermsEnum(final Terms terms, AttributeSource atts) throws IOException {
-    return new GeoPointRadiusTermsEnum(terms.iterator(), atts, minLon, minLat, maxLon, maxLat);
-  }
+  @Override
+  public Query rewrite(IndexReader reader) {
+    if (maxLon < minLon) {
+      BooleanQuery q = new BooleanQuery(true);
 
-  private final class GeoPointRadiusTermsEnum extends GeoPointTermsEnum {
-    GeoPointRadiusTermsEnum(final TermsEnum tenum, AttributeSource atts, final double minLon, final double minLat,
-                        final double maxLon, final double maxLat) {
-      super(tenum, atts, minLon, minLat, maxLon, maxLat);
+      GeoPointDistanceQueryImpl left = new GeoPointDistanceQueryImpl(field, this, new GeoBoundingBox(-180.0D, maxLon,
+          minLat, maxLat));
+      left.setBoost(getBoost());
+      q.add(new BooleanClause(left, BooleanClause.Occur.SHOULD));
+      GeoPointDistanceQueryImpl right = new GeoPointDistanceQueryImpl(field, this, new GeoBoundingBox(minLon, 180.0D,
+          minLat, maxLat));
+      right.setBoost(getBoost());
+      q.add(new BooleanClause(right, BooleanClause.Occur.SHOULD));
+      return q;
     }
-
-    @Override
-    protected boolean cellCrosses(final double minLon, final double minLat, final double maxLon, final double maxLat) {
-      return GeoUtils.rectCrossesCircle(minLon, minLat, maxLon, maxLat, centerLon, centerLat, radius);
-    }
-
-    @Override
-    protected boolean cellWithin(final double minLon, final double minLat, final double maxLon, final double maxLat) {
-      return GeoUtils.rectWithinCircle(minLon, minLat, maxLon, maxLat, centerLon, centerLat, radius);
-    }
-
-    /**
-     * The two-phase query approach. The parent
-     * {@link org.apache.lucene.search.GeoPointTermsEnum#accept} method is called to match
-     * encoded terms that fall within the bounding box of the polygon. Those documents that pass the initial
-     * bounding box filter are then compared to the provided polygon using the
-     * {@link org.apache.lucene.util.GeoUtils#pointInPolygon} method.
-     *
-     * @param term term for candidate document
-     * @return match status
-     */
-    @Override
-    protected final FilteredTermsEnum.AcceptStatus accept(BytesRef term) {
-      // first filter by bounding box
-      FilteredTermsEnum.AcceptStatus status = super.accept(term);
-      assert status != FilteredTermsEnum.AcceptStatus.YES_AND_SEEK;
-
-      if (status != FilteredTermsEnum.AcceptStatus.YES) {
-        return status;
-      }
-
-      final long val = NumericUtils.prefixCodedToLong(term);
-      final double lon = GeoUtils.mortonUnhashLon(val);
-      final double lat = GeoUtils.mortonUnhashLat(val);
-      // post-filter by distance
-      if (!(SloppyMath.haversin(centerLat, centerLon, lat, lon) <= radius)) {
-        return FilteredTermsEnum.AcceptStatus.NO;
-      }
-
-      return FilteredTermsEnum.AcceptStatus.YES;
-    }
+    return new GeoPointDistanceQueryImpl(field, this, centerLon, centerLat, radius);
   }
 
   protected static GeoBoundingBox computeBBox(final double centerLon, final double centerLat, final double radius) {
     final double lonDistDeg = GeoDistanceUtils.distanceToDegreesLon(centerLat, radius);
     final double latDistDeg = GeoDistanceUtils.distanceToDegreesLat(centerLat, radius);
 
-    return new GeoBoundingBox(centerLon - lonDistDeg, centerLon + lonDistDeg, centerLat - latDistDeg, centerLat + latDistDeg);
+    return new GeoBoundingBox(GeoUtils.normalizeLon(centerLon - lonDistDeg), GeoUtils.normalizeLon(centerLon + lonDistDeg),
+        GeoUtils.normalizeLat(centerLat - latDistDeg), GeoUtils.normalizeLat(centerLat + latDistDeg));
+  }
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) return true;
+    if (!(o instanceof GeoPointDistanceQuery)) return false;
+    if (!super.equals(o)) return false;
+
+    GeoPointDistanceQuery that = (GeoPointDistanceQuery) o;
+
+    if (Double.compare(that.centerLat, centerLat) != 0) return false;
+    if (Double.compare(that.centerLon, centerLon) != 0) return false;
+    if (Double.compare(that.radius, radius) != 0) return false;
+
+    return true;
+  }
+
+  @Override
+  public int hashCode() {
+    int result = super.hashCode();
+    long temp;
+    temp = Double.doubleToLongBits(centerLon);
+    result = 31 * result + (int) (temp ^ (temp >>> 32));
+    temp = Double.doubleToLongBits(centerLat);
+    result = 31 * result + (int) (temp ^ (temp >>> 32));
+    temp = Double.doubleToLongBits(radius);
+    result = 31 * result + (int) (temp ^ (temp >>> 32));
+    return result;
+  }
+
+  @Override
+  public String toString(String field) {
+    final StringBuilder sb = new StringBuilder();
+    sb.append(getClass().getSimpleName());
+    sb.append(':');
+    if (!this.field.equals(field)) {
+      sb.append(" field=");
+      sb.append(this.field);
+      sb.append(':');
+    }
+    return sb.append( " Center: [")
+        .append(centerLon)
+        .append(',')
+        .append(centerLat)
+        .append(']')
+        .append(" Distance: ")
+        .append(radius)
+        .append(" km")
+        .append(" Lower Left: [")
+        .append(minLon)
+        .append(',')
+        .append(minLat)
+        .append(']')
+        .append(" Upper Right: [")
+        .append(maxLon)
+        .append(',')
+        .append(maxLat)
+        .append("]")
+        .append(ToStringUtils.boost(getBoost()))
+        .toString();
   }
 }

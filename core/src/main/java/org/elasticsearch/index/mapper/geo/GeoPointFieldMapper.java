@@ -101,9 +101,8 @@ public class GeoPointFieldMapper extends FieldMapper implements ArrayValueMapper
         public static final MappedFieldType FIELD_TYPE = new GeoPointFieldType();
 
         static {
-            FIELD_TYPE.setIndexOptions(IndexOptions.DOCS);
-            FIELD_TYPE.setTokenized(false);
-            FIELD_TYPE.setOmitNorms(true);
+            FIELD_TYPE.setNumericPrecisionStep(6);
+            FIELD_TYPE.setHasDocValues(false);
             FIELD_TYPE.freeze();
         }
     }
@@ -286,7 +285,9 @@ public class GeoPointFieldMapper extends FieldMapper implements ArrayValueMapper
         private boolean normalizeLon = true;
         private boolean normalizeLat = true;
 
-        public GeoPointFieldType() {}
+        public GeoPointFieldType() {
+            super(NumberFieldMapper.Defaults.FIELD_TYPE);
+        }
 
         protected GeoPointFieldType(GeoPointFieldType ref) {
             super(ref);

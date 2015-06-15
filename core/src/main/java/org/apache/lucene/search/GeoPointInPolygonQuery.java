@@ -19,7 +19,6 @@
 
 package org.apache.lucene.search;
 
-import org.apache.lucene.index.FilteredTermsEnum;
 import org.apache.lucene.index.Terms;
 import org.apache.lucene.index.TermsEnum;
 import org.apache.lucene.util.AttributeSource;
@@ -32,8 +31,8 @@ import java.io.IOException;
 import java.util.Arrays;
 
 /** Implements a simple point in polygon query on a GeoPoint field. This is based on
- * {@link GeoPointInBBoxQuery} and is implemented using a
- * three phase approach. First, like {@link GeoPointInBBoxQuery}
+ * {@link GeoPointInBBoxQueryImpl} and is implemented using a
+ * three phase approach. First, like {@link GeoPointInBBoxQueryImpl}
  * candidate terms are queried using a numeric range based on the morton codes
  * of the min and max lat/lon pairs. Terms passing this initial filter are passed
  * to a secondary filter that verifies whether the decoded lat/lon point falls within
@@ -50,11 +49,11 @@ import java.util.Arrays;
  *
  *    @lucene.experimental
  */
-public class GeoPointInPolygonQuery extends GeoPointInBBoxQuery {
+public final class GeoPointInPolygonQuery extends GeoPointInBBoxQueryImpl {
   // polygon position arrays - this avoids the use of any objects or
   // or geo library dependencies
-  protected final double[] x;
-  protected final double[] y;
+  private final double[] x;
+  private final double[] y;
 
   /**
    * Constructs a new GeoPolygonQuery that will match encoded {@link org.apache.lucene.document.GeoPointField} terms
@@ -108,7 +107,7 @@ public class GeoPointInPolygonQuery extends GeoPointInBBoxQuery {
 
   private double[] toleranceConversion(double[] vals) {
     for (int i=0; i<vals.length; ++i) {
-      vals[i] = ((int)(vals[i]/GeoUtils.TOLERANCE))*GeoUtils.TOLERANCE;
+      vals[i] = ((int)(vals[i]/ GeoUtils.TOLERANCE))* GeoUtils.TOLERANCE;
     }
     return vals;
   }
@@ -179,19 +178,19 @@ public class GeoPointInPolygonQuery extends GeoPointInBBoxQuery {
     @Override
     protected boolean cellCrosses(final double minLon, final double minLat, final double maxLon, final double maxLat) {
       return GeoUtils.rectCrossesPoly(minLon, minLat, maxLon, maxLat, x, y, GeoPointInPolygonQuery.this.minLon,
-          GeoPointInPolygonQuery.this.minLat, GeoPointInPolygonQuery.this.maxLon, GeoPointInPolygonQuery.this.maxLat);
+              GeoPointInPolygonQuery.this.minLat, GeoPointInPolygonQuery.this.maxLon, GeoPointInPolygonQuery.this.maxLat);
     }
 
     @Override
     protected boolean cellWithin(final double minLon, final double minLat, final double maxLon, final double maxLat) {
       return GeoUtils.rectWithinPoly(minLon, minLat, maxLon, maxLat, x, y, GeoPointInPolygonQuery.this.minLon,
-          GeoPointInPolygonQuery.this.minLat, GeoPointInPolygonQuery.this.maxLon, GeoPointInPolygonQuery.this.maxLat);
+              GeoPointInPolygonQuery.this.minLat, GeoPointInPolygonQuery.this.maxLon, GeoPointInPolygonQuery.this.maxLat);
     }
 
     @Override
     protected boolean cellIntersects(final double minLon, final double minLat, final double maxLon, final double maxLat) {
       return GeoUtils.rectIntersects(minLon, minLat, maxLon, maxLat, GeoPointInPolygonQuery.this.minLon,
-          GeoPointInPolygonQuery.this.minLat, GeoPointInPolygonQuery.this.maxLon, GeoPointInPolygonQuery.this.maxLat);
+              GeoPointInPolygonQuery.this.minLat, GeoPointInPolygonQuery.this.maxLon, GeoPointInPolygonQuery.this.maxLat);
     }
 
     /**
@@ -205,12 +204,12 @@ public class GeoPointInPolygonQuery extends GeoPointInBBoxQuery {
      * @return match status
      */
     @Override
-    protected final FilteredTermsEnum.AcceptStatus accept(BytesRef term) {
+    protected final AcceptStatus accept(BytesRef term) {
       // first filter by bounding box
-      FilteredTermsEnum.AcceptStatus status = super.accept(term);
-      assert status != FilteredTermsEnum.AcceptStatus.YES_AND_SEEK;
+      AcceptStatus status = super.accept(term);
+      assert status != AcceptStatus.YES_AND_SEEK;
 
-      if (status != FilteredTermsEnum.AcceptStatus.YES) {
+      if (status != AcceptStatus.YES) {
         return status;
       }
 
@@ -219,13 +218,13 @@ public class GeoPointInPolygonQuery extends GeoPointInBBoxQuery {
       final double lat = GeoUtils.mortonUnhashLat(val);
       // post-filter by point in polygon
       if (!GeoUtils.pointInPolygon(x, y, lat, lon)) {
-        return FilteredTermsEnum.AcceptStatus.NO;
+        return AcceptStatus.NO;
       }
-      return FilteredTermsEnum.AcceptStatus.YES;
+      return AcceptStatus.YES;
     }
   }
 
-  protected static GeoBoundingBox computeBBox(double[] polyLons, double[] polyLats) {
+  private static GeoBoundingBox computeBBox(double[] polyLons, double[] polyLats) {
     if (polyLons.length != polyLats.length) {
       throw new IllegalArgumentException("polyLons and polyLats must be equal length");
     }

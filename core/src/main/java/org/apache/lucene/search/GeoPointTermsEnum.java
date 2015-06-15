@@ -39,10 +39,10 @@ import java.util.List;
  * the given bounding box and enumerates all terms contained within those ranges
  */
 class GeoPointTermsEnum extends FilteredTermsEnum {
-  protected double minLon;
-  protected double minLat;
-  protected double maxLon;
-  protected double maxLat;
+  protected final double minLon;
+  protected final double minLat;
+  protected final double maxLon;
+  protected final double maxLat;
 
   private Range currentRange;
   private BytesRef currentLowerBound, currentUpperBound;
@@ -58,29 +58,16 @@ class GeoPointTermsEnum extends FilteredTermsEnum {
     super(tenum);
     final long rectMinHash = GeoUtils.mortonHash(minLon, minLat);
     final long rectMaxHash = GeoUtils.mortonHash(maxLon, maxLat);
+    this.minLon = GeoUtils.mortonUnhashLon(rectMinHash);
     this.minLat = GeoUtils.mortonUnhashLat(rectMinHash);
+    this.maxLon = GeoUtils.mortonUnhashLon(rectMaxHash);
     this.maxLat = GeoUtils.mortonUnhashLat(rectMaxHash);
 
-    // if query spans the dateline split into two bboxes
-    double[] minLons;
-    double[] maxLons;
-    if (maxLon < minLon) {
-      minLons = new double[]{GeoUtils.mortonUnhashLon(rectMinHash), -180.0D};
-      maxLons = new double[]{180.0D, GeoUtils.mortonUnhashLon(rectMaxHash)};
-    } else {
-      minLons = new double[]{GeoUtils.mortonUnhashLon(rectMinHash)};
-      maxLons = new double[]{GeoUtils.mortonUnhashLon(rectMaxHash)};
-    }
-
-    // reuse ranges across lucene segments
     this.rangesAtt = atts.addAttribute(ComputedRangesAttribute.class);
     this.rangeBounds = rangesAtt.ranges();
+
     if (rangeBounds.isEmpty()) {
-      for (short i = 0; i < minLons.length; ++i) {
-        this.minLon = minLons[i];
-        this.maxLon = maxLons[i];
-        computeRange(0L, (short) (((GeoUtils.BITS) << 1) - 1));
-      }
+      computeRange(0L, (short) (((GeoUtils.BITS) << 1) - 1));
       Collections.sort(rangeBounds);
     }
   }
