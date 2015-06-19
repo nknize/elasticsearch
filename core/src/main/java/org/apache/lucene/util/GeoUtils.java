@@ -1,23 +1,21 @@
-/*
- * Licensed to Elasticsearch under one or more contributor
- * license agreements. See the NOTICE file distributed with
- * this work for additional information regarding copyright
- * ownership. Elasticsearch licenses this file to you under
- * the Apache License, Version 2.0 (the "License"); you may
- * not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *    http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- */
-
 package org.apache.lucene.util;
+
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 
 import java.util.ArrayList;
 
@@ -46,20 +44,29 @@ public final class GeoUtils {
   /** Maximum latitude value. */
   public static final double MAX_LAT_INCL = 90.0D;
 
+  // magic numbers for bit interleaving
+  private static final long MAGIC[] = {
+          0x5555555555555555L, 0x3333333333333333L,
+          0x0F0F0F0F0F0F0F0FL, 0x00FF00FF00FF00FFL,
+          0x0000FFFF0000FFFFL, 0x00000000FFFFFFFFL
+  };
+  // shift values for bit interleaving
+  private static final short SHIFT[] = {1, 2, 4, 8, 16};
+
   // No instance:
   private GeoUtils() {
   }
 
   public static final Long mortonHash(final double lon, final double lat) {
-    return BitUtil.interleave(scaleLon(lon), scaleLat(lat));
+    return interleave(scaleLon(lon), scaleLat(lat));
   }
 
   public static final double mortonUnhashLon(final long hash) {
-    return unscaleLon(BitUtil.deinterleave(hash));
+    return unscaleLon(deinterleave(hash));
   }
 
   public static final double mortonUnhashLat(final long hash) {
-    return unscaleLat(BitUtil.deinterleave(hash >>> 1));
+    return unscaleLat(deinterleave(hash >>> 1));
   }
 
   private static long scaleLon(final double val) {
@@ -76,6 +83,39 @@ public final class GeoUtils {
 
   private static double unscaleLat(final long val) {
     return (val / LAT_SCALE) + MIN_LAT;
+  }
+
+  /**
+   * Interleaves the first 32 bits of each long value
+   *
+   * Adapted from: http://graphics.stanford.edu/~seander/bithacks.html#InterleaveBMN
+   */
+  public static long interleave(long v1, long v2) {
+    v1 = (v1 | (v1 << SHIFT[4])) & MAGIC[4];
+    v1 = (v1 | (v1 << SHIFT[3])) & MAGIC[3];
+    v1 = (v1 | (v1 << SHIFT[2])) & MAGIC[2];
+    v1 = (v1 | (v1 << SHIFT[1])) & MAGIC[1];
+    v1 = (v1 | (v1 << SHIFT[0])) & MAGIC[0];
+    v2 = (v2 | (v2 << SHIFT[4])) & MAGIC[4];
+    v2 = (v2 | (v2 << SHIFT[3])) & MAGIC[3];
+    v2 = (v2 | (v2 << SHIFT[2])) & MAGIC[2];
+    v2 = (v2 | (v2 << SHIFT[1])) & MAGIC[1];
+    v2 = (v2 | (v2 << SHIFT[0])) & MAGIC[0];
+
+    return (v2<<1) | v1;
+  }
+
+  /**
+   * Deinterleaves long value back to two concatenated 32bit values
+   */
+  public static long deinterleave(long b) {
+    b &= MAGIC[0];
+    b = (b ^ (b >>> SHIFT[0])) & MAGIC[1];
+    b = (b ^ (b >>> SHIFT[1])) & MAGIC[2];
+    b = (b ^ (b >>> SHIFT[2])) & MAGIC[3];
+    b = (b ^ (b >>> SHIFT[3])) & MAGIC[4];
+    b = (b ^ (b >>> SHIFT[4])) & MAGIC[5];
+    return b;
   }
 
   public static final double compare(final double v1, final double v2) {
@@ -111,7 +151,7 @@ public final class GeoUtils {
   public static final boolean bboxContains(final double lon, final double lat, final double minLon,
                                            final double minLat, final double maxLon, final double maxLat) {
     return (compare(lon, minLon) >= 0 && compare(lon, maxLon) <= 0
-          && compare(lat, minLat) >= 0 && compare(lat, maxLat) <= 0);
+            && compare(lat, minLat) >= 0 && compare(lat, maxLat) <= 0);
   }
 
   /**
@@ -169,7 +209,7 @@ public final class GeoUtils {
   public static boolean rectCrosses(final double aMinX, final double aMinY, final double aMaxX, final double aMaxY,
                                     final double bMinX, final double bMinY, final double bMaxX, final double bMaxY) {
     return !(rectDisjoint(aMinX, aMinY, aMaxX, aMaxY, bMinX, bMinY, bMaxX, bMaxY) ||
-        rectWithin(aMinX, aMinY, aMaxX, aMaxY, bMinX, bMinY, bMaxX, bMaxY));
+            rectWithin(aMinX, aMinY, aMaxX, aMaxY, bMinX, bMinY, bMaxX, bMaxY));
   }
 
   /**
@@ -177,7 +217,7 @@ public final class GeoUtils {
    */
   public static boolean rectContains(final double aMinX, final double aMinY, final double aMaxX, final double aMaxY,
                                      final double bMinX, final double bMinY, final double bMaxX, final double bMaxY) {
-      return !(bMinX < aMinX || bMinY < aMinY || bMaxX > aMaxX || bMaxY > aMaxY);
+    return !(bMinX < aMinX || bMinY < aMinY || bMaxX > aMaxX || bMaxY > aMaxY);
   }
 
   /**
@@ -229,7 +269,7 @@ public final class GeoUtils {
           y11 = StrictMath.max(shapeY[p], shapeY[p+1]) + TOLERANCE;
           // check whether the intersection point is touching one of the line segments
           boolean touching = ((x00 == s && y00 == t) || (x01 == s && y01 == t))
-              || ((x10 == s && y10 == t) || (x11 == s && y11 == t));
+                  || ((x10 == s && y10 == t) || (x11 == s && y11 == t));
           // if line segments are not touching and the intersection point is within the range of either segment
           if (!(touching || x00 > s || x01 < s || y00 > t || y01 < t || x10 > s || x11 < s || y10 > t || y11 < t))
             return true;
@@ -244,7 +284,7 @@ public final class GeoUtils {
    *
    * @param lon longitudinal center of circle (in degrees)
    * @param lat latitudinal center of circle (in degrees)
-   * @param radius distance radius of circle (in kilometers)
+   * @param radius distance radius of circle (in meters)
    * @return a list of lon/lat points representing the circle
    */
   @SuppressWarnings({"unchecked","rawtypes"})
@@ -282,16 +322,16 @@ public final class GeoUtils {
     // check if rectangle crosses poly (to handle concave/pacman polys), then check that all 4 corners
     // are contained
     return !(rectCrossesPoly(rMinX, rMinY, rMaxX, rMaxY, shapeX, shapeY, sMinX, sMinY, sMaxX, sMaxY) ||
-        !pointInPolygon(shapeX, shapeY, rMinY, rMinX) || !pointInPolygon(shapeX, shapeY, rMinY, rMaxX) ||
-        !pointInPolygon(shapeX, shapeY, rMaxY, rMaxX) || !pointInPolygon(shapeX, shapeY, rMaxY, rMinX));
+            !pointInPolygon(shapeX, shapeY, rMinY, rMinX) || !pointInPolygon(shapeX, shapeY, rMinY, rMaxX) ||
+            !pointInPolygon(shapeX, shapeY, rMaxY, rMaxX) || !pointInPolygon(shapeX, shapeY, rMaxY, rMinX));
   }
 
   public static boolean rectWithinCircle(final double rMinX, final double rMinY, final double rMaxX, final double rMaxY,
                                          final double centerLon, final double centerLat, final double radius) {
-    return !(SloppyMath.haversin(centerLat, centerLon, rMinY, rMinX) > radius
-        || SloppyMath.haversin(centerLat, centerLon, rMaxY, rMinX) > radius
-        || SloppyMath.haversin(centerLat, centerLon, rMaxY, rMaxX) > radius
-        || SloppyMath.haversin(centerLat, centerLon, rMinY, rMaxX) > radius);
+    return !(SloppyMath.haversin(centerLat, centerLon, rMinY, rMinX)*1000.0 > radius
+            || SloppyMath.haversin(centerLat, centerLon, rMaxY, rMinX)*1000.0 > radius
+            || SloppyMath.haversin(centerLat, centerLon, rMaxY, rMaxX)*1000.0 > radius
+            || SloppyMath.haversin(centerLat, centerLon, rMinY, rMaxX)*1000.0 > radius);
 
   }
 
@@ -301,15 +341,15 @@ public final class GeoUtils {
   public static boolean rectCrossesCircle(final double rMinX, final double rMinY, final double rMaxX, final double rMaxY,
                                           final double centerLon, final double centerLat, final double radius) {
     return lineCrossesPointRadius(rMinX, rMinY, rMaxX, rMinY, centerLon, centerLat, radius)
-        || lineCrossesPointRadius(rMaxX, rMinY, rMaxX, rMaxY, centerLon, centerLat, radius)
-        || lineCrossesPointRadius(rMaxX, rMaxY, rMinX, rMaxY, centerLon, centerLat, radius)
-        || lineCrossesPointRadius(rMinX, rMaxY, rMinX, rMinY, centerLon, centerLat, radius);
+            || lineCrossesPointRadius(rMaxX, rMinY, rMaxX, rMaxY, centerLon, centerLat, radius)
+            || lineCrossesPointRadius(rMaxX, rMaxY, rMinX, rMaxY, centerLon, centerLat, radius)
+            || lineCrossesPointRadius(rMinX, rMaxY, rMinX, rMinY, centerLon, centerLat, radius);
   }
 
   private static boolean lineCrossesPointRadius(final double x1, final double y1, final double x2, final double y2,
-                                           final double centerX, final double centerY, final double radius) {
+                                                final double centerX, final double centerY, final double radius) {
     return (x1 - x2 < 90.0) ? lineCrossesCircle(x1, y1, x2, y2, centerX, centerY, radius) :
-        lineCrossesSphere(x1, y1, 0, x2, y2, 0, centerX, centerY, 0, radius);
+            lineCrossesSphere(x1, y1, 0, x2, y2, 0, centerX, centerY, 0, radius);
   }
 
   /**
@@ -324,7 +364,7 @@ public final class GeoUtils {
    * @param centerLon longitudinal location of center search point (in degrees)
    * @param centerLat latitudinal location of center search point (in degrees)
    * @param centerAlt altitude of the center point (in meters)
-   * @param radius search sphere radius (in kilometers)
+   * @param radius search sphere radius (in meters)
    * @return whether the provided line segment is a secant of the
    */
   private static boolean lineCrossesSphere(double lon1, double lat1, double alt1, double lon2,
@@ -334,7 +374,6 @@ public final class GeoUtils {
     double[] ecf1 = GeoProjectionUtils.llaToECF(lon1, lat1, alt1, null);
     double[] ecf2 = GeoProjectionUtils.llaToECF(lon2, lat2, alt2, null);
     double[] cntr = GeoProjectionUtils.llaToECF(centerLon, centerLat, centerAlt, null);
-    radius *= 1000d;
 
     final double dX = ecf2[0] - ecf1[0];
     final double dY = ecf2[1] - ecf1[1];
@@ -366,12 +405,12 @@ public final class GeoUtils {
    * Computes whether a line crosses a circle. That is, one point is inside and one is outside, or the line is a secant
    */
   private static boolean lineCrossesCircle(final double x1, final double y1, final double x2, final double y2,
-                                           final double centerX, final double centerY, final double radius) {
+                                           final double centerX, final double centerY, double radius) {
     final double dX = x2 - x1;
     final double dY = y2 - y1;
     final double fX = x1 - centerX;
     final double fY = y1 - centerY;
-
+    radius /= 1000.0;
     final double a = dX*dX + dY*dY;
     final double b = 2 * fX*dX + fY*dY;
     final double c = fX*fX + fY*fY - radius*radius;

@@ -1,23 +1,23 @@
+package org.apache.lucene.search;
+
 /*
- * Licensed to Elasticsearch under one or more contributor
- * license agreements. See the NOTICE file distributed with
- * this work for additional information regarding copyright
- * ownership. Elasticsearch licenses this file to you under
- * the Apache License, Version 2.0 (the "License"); you may
- * not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
  *
- *    http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
-package org.apache.lucene.search;
+import java.io.IOException;
 
 import org.apache.lucene.index.Terms;
 import org.apache.lucene.index.TermsEnum;
@@ -27,8 +27,6 @@ import org.apache.lucene.util.GeoDistanceUtils;
 import org.apache.lucene.util.GeoUtils;
 import org.apache.lucene.util.NumericUtils;
 import org.apache.lucene.util.SloppyMath;
-
-import java.io.IOException;
 
 /** Package private implementation for the public facing GeoPointDistanceQuery delegate class.
  *
@@ -53,7 +51,7 @@ final class GeoPointDistanceQueryImpl extends GeoPointInBBoxQueryImpl {
 
   private final class GeoPointRadiusTermsEnum extends GeoPointTermsEnum {
     GeoPointRadiusTermsEnum(final TermsEnum tenum, AttributeSource atts, final double minLon, final double minLat,
-                        final double maxLon, final double maxLat) {
+                            final double maxLon, final double maxLat) {
       super(tenum, atts, minLon, minLat, maxLon, maxLat);
     }
 
@@ -91,7 +89,7 @@ final class GeoPointDistanceQueryImpl extends GeoPointInBBoxQueryImpl {
       final double lon = GeoUtils.mortonUnhashLon(val);
       final double lat = GeoUtils.mortonUnhashLat(val);
       // post-filter by distance
-      if (!(SloppyMath.haversin(query.centerLat, query.centerLon, lat, lon) <= query.radius)) {
+      if (!(SloppyMath.haversin(query.centerLat, query.centerLon, lat, lon) <= (query.radius/1000.0))) {
         return AcceptStatus.NO;
       }
 
@@ -104,7 +102,7 @@ final class GeoPointDistanceQueryImpl extends GeoPointInBBoxQueryImpl {
     final double latDistDeg = GeoDistanceUtils.distanceToDegreesLat(centerLat, radius);
 
     return new GeoBoundingBox(GeoUtils.normalizeLon(centerLon - lonDistDeg), GeoUtils.normalizeLon(centerLon + lonDistDeg),
-        GeoUtils.normalizeLat(centerLat - latDistDeg), GeoUtils.normalizeLat(centerLat + latDistDeg));
+            GeoUtils.normalizeLat(centerLat - latDistDeg), GeoUtils.normalizeLat(centerLat + latDistDeg));
   }
 
   @Override

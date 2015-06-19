@@ -1,21 +1,23 @@
-package org.apache.lucene.util;
-
 /*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
+ * Licensed to Elasticsearch under one or more contributor
+ * license agreements. See the NOTICE file distributed with
+ * this work for additional information regarding copyright
+ * ownership. Elasticsearch licenses this file to you under
+ * the Apache License, Version 2.0 (the "License"); you may
+ * not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ *    http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
  */
+
+package org.apache.lucene.util;
 
 /**
  * Reusable geo-spatial projection utility methods.
@@ -319,16 +321,16 @@ public class GeoProjectionUtils {
    * @param lon origin longitude in degrees
    * @param lat origin latitude in degrees
    * @param bearing azimuthal bearing in degrees
-   * @param dist distance in kilometers
+   * @param dist distance in meters
    * @param pt resulting point
-   * @return the point along a bearing at a given distance in kilometers
+   * @return the point along a bearing at a given distance in meters
    */
   public static final double[] pointFromLonLatBearing(double lon, double lat, double bearing, double dist, double[] pt) {
     if (pt == null)
       pt = new double[2];
 
-    // convert from kilometers to meters
-    dist *= 1000;
+//    // convert from kilometers to meters
+//    dist *= 1000;
 
     final double alpha1 = StrictMath.toRadians(bearing);
     final double cosA1 = StrictMath.cos(alpha1);
@@ -353,19 +355,19 @@ public class GeoProjectionUtils {
       cosSigma = StrictMath.cos(sigma);
 
       deltaSigma = B * sinSigma * (cos2SigmaM + (B/4D) * (cosSigma*(-1+2*cos2SigmaM*cos2SigmaM)-
-          (B/6) * cos2SigmaM*(-3+4*sinSigma*sinSigma)*(-3+4*cos2SigmaM*cos2SigmaM)));
+              (B/6) * cos2SigmaM*(-3+4*sinSigma*sinSigma)*(-3+4*cos2SigmaM*cos2SigmaM)));
       sigmaP = sigma;
       sigma = dist / (SEMIMINOR_AXIS*A) + deltaSigma;
     } while (StrictMath.abs(sigma-sigmaP) > 1E-12);
 
     final double tmp = sinU1*sinSigma - cosU1*cosSigma*cosA1;
     final double lat2 = StrictMath.atan2(sinU1*cosSigma + cosU1*sinSigma*cosA1,
-        (1-FLATTENING) * StrictMath.sqrt(sinAlpha*sinAlpha + tmp*tmp));
+            (1-FLATTENING) * StrictMath.sqrt(sinAlpha*sinAlpha + tmp*tmp));
     final double lambda = StrictMath.atan2(sinSigma*sinA1, cosU1*cosSigma - sinU1*sinSigma*cosA1);
     final double c = FLATTENING/16 * cosSqAlpha * (4 + FLATTENING * (4 - 3 * cosSqAlpha));
 
     final double lam = lambda - (1-c) * FLATTENING * sinAlpha *
-        (sigma + c * sinSigma * (cos2SigmaM + c * cosSigma * (-1 + 2* cos2SigmaM*cos2SigmaM)));
+            (sigma + c * sinSigma * (cos2SigmaM + c * cosSigma * (-1 + 2* cos2SigmaM*cos2SigmaM)));
     pt[0] = lon + StrictMath.toDegrees(lam);
     pt[1] = StrictMath.toDegrees(lat2);
 

@@ -114,7 +114,7 @@ public class MultiFieldsIntegrationTests extends ElasticsearchIntegrationTest {
         Map<String, Object> mappingSource = mappingMetaData.sourceAsMap();
         Map aField = ((Map) XContentMapValues.extractValue("properties.a", mappingSource));
         logger.info("Keys: " + aField.keySet());
-        assertThat(aField.size(), equalTo(2));
+        assertThat(aField.size(), equalTo(3));
         assertThat(aField.get("type").toString(), equalTo("geo_point"));
         assertThat(aField.get("fields"), notNullValue());
 

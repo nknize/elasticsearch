@@ -115,7 +115,7 @@ public final class GeoPointInPolygonQuery extends GeoPointInBBoxQueryImpl {
   @Override @SuppressWarnings("unchecked")
   protected TermsEnum getTermsEnum(final Terms terms, AttributeSource atts) throws IOException {
     final Long min = GeoUtils.mortonHash(minLon, minLat);
-    final Long max = Math.abs(GeoUtils.mortonHash(maxLon, maxLat));
+    final Long max = StrictMath.abs(GeoUtils.mortonHash(maxLon, maxLat));
     if (min != null && max != null &&  min.compareTo(max) > 0) {
       return TermsEnum.EMPTY;
     }
@@ -241,10 +241,10 @@ public final class GeoPointInPolygonQuery extends GeoPointInBBoxQueryImpl {
       if (GeoUtils.isValidLat(polyLats[i]) == false) {
         throw new IllegalArgumentException("invalid polyLats[" + i + "]=" + polyLats[i]);
       }
-      minLon = Math.min(polyLons[i], minLon);
-      maxLon = Math.max(polyLons[i], maxLon);
-      minLat = Math.min(polyLats[i], minLat);
-      maxLat = Math.max(polyLats[i], maxLat);
+      minLon = StrictMath.min(polyLons[i], minLon);
+      maxLon = StrictMath.max(polyLons[i], maxLon);
+      minLat = StrictMath.min(polyLats[i], minLat);
+      maxLat = StrictMath.max(polyLats[i], maxLat);
     }
 
     return new GeoBoundingBox(minLon, maxLon, minLat, maxLat);
