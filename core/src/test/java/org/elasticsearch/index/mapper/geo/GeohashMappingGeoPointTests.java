@@ -19,6 +19,7 @@
 
 package org.elasticsearch.index.mapper.geo;
 
+import org.apache.lucene.util.GeoUtils;
 import org.elasticsearch.common.geo.GeoHashUtils;
 import org.elasticsearch.common.xcontent.XContentFactory;
 import org.elasticsearch.index.mapper.DocumentMapper;
@@ -51,7 +52,7 @@ public class GeohashMappingGeoPointTests extends ElasticsearchSingleNodeTest {
 
         MatcherAssert.assertThat(doc.rootDoc().getField("point.lat"), nullValue());
         MatcherAssert.assertThat(doc.rootDoc().getField("point.lon"), nullValue());
-        MatcherAssert.assertThat(doc.rootDoc().get("point"), equalTo("1.2,1.3"));
+        MatcherAssert.assertThat(doc.rootDoc().get("point"), equalTo(GeoUtils.mortonHash(1.3, 1.2)+""));
     }
 
     @Test
@@ -70,7 +71,7 @@ public class GeohashMappingGeoPointTests extends ElasticsearchSingleNodeTest {
 
         MatcherAssert.assertThat(doc.rootDoc().getField("point.lat"), nullValue());
         MatcherAssert.assertThat(doc.rootDoc().getField("point.lon"), nullValue());
-        MatcherAssert.assertThat(doc.rootDoc().get("point"), equalTo("1.2,1.3"));
+        MatcherAssert.assertThat(doc.rootDoc().get("point"), equalTo(GeoUtils.mortonHash(1.3, 1.2)+""));
     }
 
     @Test

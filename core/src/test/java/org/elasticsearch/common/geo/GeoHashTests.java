@@ -18,6 +18,8 @@
  */
 package org.elasticsearch.common.geo;
 
+import org.apache.lucene.util.*;
+import org.apache.lucene.util.GeoUtils;
 import org.elasticsearch.test.ElasticsearchTestCase;
 import org.junit.Test;
 
@@ -42,7 +44,7 @@ public class GeoHashTests extends ElasticsearchTestCase {
                 for(int p=1;p<=12;p++)
                 {
                     long geoAsLong = GeoHashUtils.encodeAsLong(lat,lng,p);
-                    String geohash = GeoHashUtils.encode(lat,lng,p);
+                    String geohash = org.apache.lucene.util.GeoUtils.toGeoHashString(lng, lat, p);
                     
                     String geohashFromLong=GeoHashUtils.toString(geoAsLong);
                     assertEquals(geohash, geohashFromLong);

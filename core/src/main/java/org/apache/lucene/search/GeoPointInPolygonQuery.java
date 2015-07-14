@@ -249,4 +249,12 @@ public final class GeoPointInPolygonQuery extends GeoPointInBBoxQueryImpl {
 
     return new GeoBoundingBox(minLon, maxLon, minLat, maxLat);
   }
+
+  public final double[] getLons() {
+    return this.x;
+  }
+
+  public final double[] getLats() {
+    return this.y;
+  }
 }

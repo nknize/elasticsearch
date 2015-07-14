@@ -77,7 +77,7 @@ public final class GeoPointDistanceQuery extends GeoPointInBBoxQuery {
         return new GeoPointDistanceQueryImpl(field, this, centerLon, centerLat, radius);
     }
 
-    protected static GeoBoundingBox computeBBox(final double centerLon, final double centerLat, final double radius) {
+    public static GeoBoundingBox computeBBox(final double centerLon, final double centerLat, final double radius) {
         final double lonDistDeg = GeoDistanceUtils.distanceToDegreesLon(centerLat, radius);
         final double latDistDeg = GeoDistanceUtils.distanceToDegreesLat(centerLat, radius);
 
@@ -143,5 +143,17 @@ public final class GeoPointDistanceQuery extends GeoPointInBBoxQuery {
                 .append("]")
                 .append(ToStringUtils.boost(getBoost()))
                 .toString();
+    }
+
+    public final double getCenterLon() {
+        return this.centerLon;
+    }
+
+    public final double getCenterLat() {
+        return this.centerLat;
+    }
+
+    public final double getRadius() {
+        return this.radius;
     }
 }

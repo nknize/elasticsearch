@@ -21,6 +21,7 @@ package org.elasticsearch.common.geo;
 
 
 import org.apache.lucene.util.*;
+import org.apache.lucene.util.GeoUtils;
 
 /**
  *
@@ -98,11 +99,11 @@ public final class GeoPoint {
     }
 
     public final String geohash() {
-        return GeoHashUtils.encode(lat, lon);
+        return GeoUtils.toGeoHashString(lon, lat);
     }
 
     public final String getGeohash() {
-        return GeoHashUtils.encode(lat, lon);
+        return GeoUtils.toGeoHashString(lon, lat);
     }
 
     @Override

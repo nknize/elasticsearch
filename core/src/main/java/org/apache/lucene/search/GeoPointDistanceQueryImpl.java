@@ -36,7 +36,7 @@ final class GeoPointDistanceQueryImpl extends GeoPointInBBoxQueryImpl {
   private final GeoPointDistanceQuery query;
 
   GeoPointDistanceQueryImpl(final String field, final GeoPointDistanceQuery q, final double centerLon, final double centerLat, final double radius) {
-    this(field, q, computeBBox(centerLon, centerLat, radius));
+    this(field, q, GeoPointDistanceQuery.computeBBox(centerLon, centerLat, radius));
   }
 
   GeoPointDistanceQueryImpl(final String field, final GeoPointDistanceQuery q, final GeoBoundingBox bbox) {
@@ -95,14 +95,6 @@ final class GeoPointDistanceQueryImpl extends GeoPointInBBoxQueryImpl {
 
       return AcceptStatus.YES;
     }
-  }
-
-  protected static GeoBoundingBox computeBBox(final double centerLon, final double centerLat, final double radius) {
-    final double lonDistDeg = GeoDistanceUtils.distanceToDegreesLon(centerLat, radius);
-    final double latDistDeg = GeoDistanceUtils.distanceToDegreesLat(centerLat, radius);
-
-    return new GeoBoundingBox(GeoUtils.normalizeLon(centerLon - lonDistDeg), GeoUtils.normalizeLon(centerLon + lonDistDeg),
-            GeoUtils.normalizeLat(centerLat - latDistDeg), GeoUtils.normalizeLat(centerLat + latDistDeg));
   }
 
   @Override

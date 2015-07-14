@@ -45,7 +45,7 @@ abstract class AbstractIndexGeoPointFieldData extends AbstractIndexFieldData<Ato
 
         public Long next() throws IOException {
             final BytesRef term = termsEnum.next();
-            if (term.bytes[0] != 0x20 || term == null) {
+            if (term == null) {
                 return null;
             }
             return NumericUtils.prefixCodedToLong(term);

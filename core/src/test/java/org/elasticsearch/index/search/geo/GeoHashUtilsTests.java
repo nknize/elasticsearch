@@ -19,6 +19,7 @@
 
 package org.elasticsearch.index.search.geo;
 
+import org.apache.lucene.util.GeoUtils;
 import org.elasticsearch.common.geo.GeoHashUtils;
 import org.elasticsearch.common.geo.GeoPoint;
 import org.elasticsearch.test.ElasticsearchTestCase;
@@ -39,10 +40,10 @@ public class GeoHashUtilsTests extends ElasticsearchTestCase {
      */
     @Test
     public void testEncode() {
-        String hash = GeoHashUtils.encode(42.6, -5.6);
+        String hash = GeoUtils.toGeoHashString(-5.6, 42.6, 12);
         assertEquals("ezs42e44yx96", hash);
 
-        hash = GeoHashUtils.encode(57.64911, 10.40744);
+        hash = GeoUtils.toGeoHashString(10.40744, 57.64911, 12);
         assertEquals("u4pruydqqvj8", hash);
     }
 
@@ -81,12 +82,12 @@ public class GeoHashUtilsTests extends ElasticsearchTestCase {
     @Test
     public void testDecodeEncode() {
         String geoHash = "u173zq37x014";
-        assertEquals(geoHash, GeoHashUtils.encode(52.3738007, 4.8909347));
+        assertEquals(geoHash, GeoUtils.toGeoHashString(4.8909347, 52.3738007));
         GeoPoint decode = GeoHashUtils.decode(geoHash);
         assertEquals(52.37380061d, decode.lat(), 0.000001d);
         assertEquals(4.8909343d, decode.lon(), 0.000001d);
 
-        assertEquals(geoHash, GeoHashUtils.encode(decode.lat(), decode.lon()));
+        assertEquals(geoHash, GeoUtils.toGeoHashString(decode.lon(), decode.lat()));
     }
 
     @Test

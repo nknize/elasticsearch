@@ -126,4 +126,24 @@ public class GeoPointInBBoxQuery extends Query {
     result = 31 * result + (int) (temp ^ (temp >>> 32));
     return result;
   }
+
+  public final String getField() {
+    return field;
+  }
+
+  public final double getMinLon() {
+    return this.minLon;
+  }
+
+  public final double getMinLat() {
+    return this.minLat;
+  }
+
+  public final double getMaxLon() {
+    return this.maxLon;
+  }
+
+  public final double getMaxLat() {
+    return this.maxLat;
+  }
 }

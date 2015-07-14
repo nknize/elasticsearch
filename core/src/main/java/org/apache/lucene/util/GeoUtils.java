@@ -48,10 +48,17 @@ public final class GeoUtils {
   private static final long MAGIC[] = {
           0x5555555555555555L, 0x3333333333333333L,
           0x0F0F0F0F0F0F0F0FL, 0x00FF00FF00FF00FFL,
-          0x0000FFFF0000FFFFL, 0x00000000FFFFFFFFL
+          0x0000FFFF0000FFFFL, 0x00000000FFFFFFFFL,
+          0xAAAAAAAAAAAAAAAAL
   };
   // shift values for bit interleaving
   private static final short SHIFT[] = {1, 2, 4, 8, 16};
+
+  private static final char[] BASE_32 = {'0', '1', '2', '3', '4', '5', '6',
+          '7', '8', '9', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'j', 'k', 'm', 'n',
+          'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z'};
+
+  private static final String BASE_32_STRING = new String(BASE_32);
 
   // No instance:
   private GeoUtils() {
@@ -118,6 +125,13 @@ public final class GeoUtils {
     return b;
   }
 
+  /**
+   * flip flops odd with even bits
+   */
+  public static final long flipFlop(final long b) {
+    return ((b & MAGIC[6]) >>> 1) | ((b & MAGIC[0]) << 1 );
+  }
+
   public static final double compare(final double v1, final double v2) {
     final double compare = v1-v2;
     return Math.abs(compare) <= TOLERANCE ? 0 : compare;
@@ -146,6 +160,63 @@ public final class GeoUtils {
       return lat_deg;//common case, and avoids slight double precision shifting
     double off = Math.abs((lat_deg + 90) % 360);
     return (off <= 180 ? off : 360-off) - 90;
+  }
+
+  public static final long toGeoHashLong(final double lon, final double lat, final int level) {
+    // shift to appropriate level
+    final short msf = (short)(((12 - level) * 5) + 2);
+    return flipFlop(mortonHash(lon, lat)) >>> msf;
+  }
+
+  public static final String toGeoHashString(final long hashedVal) {
+    return toGeoHashString(hashedVal, 12);
+  }
+
+  public static final String toGeoHashString(long hashedVal, final int level) {
+    // bit twiddle to geohash (since geohash is a swapped (lon/lat) encoding)
+    hashedVal = flipFlop(hashedVal);
+
+    StringBuilder geoHash = new StringBuilder();
+    short precision = 0;
+    final short msf = (BITS<<1)-5;
+    long mask = 31L<<msf;
+    do {
+      geoHash.append(BASE_32[(int)((mask & hashedVal)>>>(msf-(precision*5)))]);
+      // next 5 bits
+      mask >>>= 5;
+    } while (++precision < level);
+    return geoHash.toString();
+  }
+
+  public static final String toGeoHashString(final double lon, final double lat) {
+    return toGeoHashString(lon, lat, 12);
+  }
+
+  public static final String toGeoHashString(final double lon, final double lat, final int level) {
+    // bit twiddle to geohash (since geohash is a swapped (lon/lat) encoding)
+    final long hashedVal = flipFlop(mortonHash(lon, lat));
+
+    StringBuilder geoHash = new StringBuilder();
+    short precision = 0;
+    final short msf = (BITS<<1)-5;
+    long mask = 31L<<msf;
+    do {
+      geoHash.append(BASE_32[(int)((mask & hashedVal)>>>(msf-(precision*5)))]);
+      // next 5 bits
+      mask >>>= 5;
+    } while (++precision < level);
+    return geoHash.toString();
+  }
+
+  public static final long fromGeoHashString(final String hash) {
+    int level = 11;//hash.length()-1;
+    long b;
+    long l = 0L;
+    for(char c : hash.toCharArray()) {
+      b = (long)(BASE_32_STRING.indexOf(c));
+      l |= (b<<((level--*5)+2));
+    }
+    return flipFlop(l);
   }
 
   public static final boolean bboxContains(final double lon, final double lat, final double minLon,

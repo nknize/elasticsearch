@@ -18,6 +18,7 @@
  */
 package org.elasticsearch.search.aggregations.bucket.geogrid;
 
+import org.apache.lucene.util.GeoUtils;
 import org.apache.lucene.util.PriorityQueue;
 import org.elasticsearch.common.geo.GeoHashUtils;
 import org.elasticsearch.common.geo.GeoPoint;
