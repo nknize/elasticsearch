@@ -22,7 +22,6 @@ package org.apache.lucene.search;
 import org.apache.lucene.index.Terms;
 import org.apache.lucene.index.TermsEnum;
 import org.apache.lucene.util.AttributeSource;
-import org.apache.lucene.util.GeoUtils;
 import org.apache.lucene.util.ToStringUtils;
 
 import java.io.IOException;
@@ -31,13 +30,7 @@ import java.io.IOException;
  *
  *    @lucene.experimental
  */
-class GeoPointInBBoxQueryImpl extends MultiTermQuery {
-  // simple bounding box optimization - no objects used to avoid dependencies
-  protected final double minLon;
-  protected final double minLat;
-  protected final double maxLon;
-  protected final double maxLat;
-
+class GeoPointInBBoxQueryImpl extends GeoPointTermQuery {
   /**
    * Constructs a new GeoBBoxQuery that will match encoded GeoPoint terms that fall within or on the boundary
    * of the bounding box defined by the input parameters
@@ -48,28 +41,17 @@ class GeoPointInBBoxQueryImpl extends MultiTermQuery {
    * @param maxLat upper latitude (y) value of the bounding box
    */
   GeoPointInBBoxQueryImpl(final String field, final double minLon, final double minLat, final double maxLon, final double maxLat) {
-    super(field);
-    if (GeoUtils.isValidLon(minLon) == false) {
-      throw new IllegalArgumentException("invalid minLon " + minLon);
-    }
-    if (GeoUtils.isValidLon(maxLon) == false) {
-      throw new IllegalArgumentException("invalid maxLon " + maxLon);
-    }
-    if (GeoUtils.isValidLat(minLat) == false) {
-      throw new IllegalArgumentException("invalid minLat " + minLat);
-    }
-    if (GeoUtils.isValidLat(maxLat) == false) {
-      throw new IllegalArgumentException("invalid maxLat " + maxLat);
-    }
-    this.minLon = minLon;
-    this.minLat = minLat;
-    this.maxLon = maxLon;
-    this.maxLat = maxLat;
+    super(field, minLon, minLat, maxLon, maxLat);
   }
 
   @Override @SuppressWarnings("unchecked")
   protected TermsEnum getTermsEnum(final Terms terms, AttributeSource atts) throws IOException {
-    return new GeoPointTermsEnum(terms.iterator(), atts, minLon, minLat, maxLon, maxLat);
+    return new GeoPointTermsEnum(terms.iterator(), minLon, minLat, maxLon, maxLat);
+  }
+
+  @Override
+  public void setRewriteMethod(RewriteMethod method) {
+    throw new UnsupportedOperationException("cannot change rewrite method");
   }
 
   @Override

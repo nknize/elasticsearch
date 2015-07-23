@@ -22,9 +22,6 @@ package org.apache.lucene.search;
 import org.apache.lucene.document.GeoPointField;
 import org.apache.lucene.index.FilteredTermsEnum;
 import org.apache.lucene.index.TermsEnum;
-import org.apache.lucene.util.Attribute;
-import org.apache.lucene.util.AttributeImpl;
-import org.apache.lucene.util.AttributeSource;
 import org.apache.lucene.util.BytesRef;
 import org.apache.lucene.util.BytesRefBuilder;
 import org.apache.lucene.util.GeoUtils;
@@ -37,25 +34,32 @@ import java.util.List;
 /**
  * computes all ranges along a space-filling curve that represents
  * the given bounding box and enumerates all terms contained within those ranges
+ *
+ * Note: the {@param detailLevel} is configurable for controlling the boundary resolution of the query. The
+ * higher the resolution the greater the number of ranges along the query boundary. This results in visiting fewer terms
+ * in the terms dictionary for the price of memory usage. The lower the resolution the fewer number of ranges (and less
+ * memory usage) for the price of visiting more terms.
+ *
+ *  @lucene.experimental
  */
 class GeoPointTermsEnum extends FilteredTermsEnum {
   protected final double minLon;
   protected final double minLat;
   protected final double maxLon;
   protected final double maxLat;
+  protected final short detailLevel;
+  private final static short MIN_LEVEL = 3 * GeoPointField.PRECISION_STEP;
+  private final static short MAX_LEVEL = 6 * GeoPointField.PRECISION_STEP;
 
   private Range currentRange;
   private BytesRef currentLowerBound, currentUpperBound;
 
-  private final ComputedRangesAttribute rangesAtt;
+  private final List<Range> rangeBounds = new LinkedList<>();
 
-  private final LinkedList<Range> rangeBounds;
-
-  private static final short DETAIL_LEVEL = 16;
-
-  GeoPointTermsEnum(final TermsEnum tenum, AttributeSource atts, final double minLon, final double minLat,
+  GeoPointTermsEnum(final TermsEnum tenum, final double minLon, final double minLat,
                     final double maxLon, final double maxLat) {
     super(tenum);
+    this.detailLevel = computeDetailLevel(minLon, minLat, maxLon, maxLat);
     final long rectMinHash = GeoUtils.mortonHash(minLon, minLat);
     final long rectMaxHash = GeoUtils.mortonHash(maxLon, maxLat);
     this.minLon = GeoUtils.mortonUnhashLon(rectMinHash);
@@ -63,13 +67,8 @@ class GeoPointTermsEnum extends FilteredTermsEnum {
     this.maxLon = GeoUtils.mortonUnhashLon(rectMaxHash);
     this.maxLat = GeoUtils.mortonUnhashLat(rectMaxHash);
 
-    this.rangesAtt = atts.addAttribute(ComputedRangesAttribute.class);
-    this.rangeBounds = rangesAtt.ranges();
-
-    if (rangeBounds.isEmpty()) {
-      computeRange(0L, (short) (((GeoUtils.BITS) << 1) - 1));
-      Collections.sort(rangeBounds);
-    }
+    computeRange(0L, (short) (((GeoUtils.BITS) << 1) - 1));
+    Collections.sort(rangeBounds);
   }
 
   /**
@@ -100,13 +99,11 @@ class GeoPointTermsEnum extends FilteredTermsEnum {
 
     final short level = (short)(62-res>>>1);
 
-    // if cell is within and a factor of the precision step, add the range
-    // if cell cellCrosses
-
-    final boolean within = res% GeoPointField.PRECISION_STEP == 0 && cellWithin(minLon, minLat, maxLon, maxLat);
-    if (within || (level == DETAIL_LEVEL && cellCrosses(minLon, minLat, maxLon, maxLat))) {
+    // if cell is within and a factor of the precision step, or it crosses the edge of the shape add the range
+    final boolean within = res % GeoPointField.PRECISION_STEP == 0 && cellWithin(minLon, minLat, maxLon, maxLat);
+    if (within || (level == detailLevel && cellCrosses(minLon, minLat, maxLon, maxLat))) {
       rangeBounds.add(new Range(start, end, res, level, !within));
-    } else if (level <= DETAIL_LEVEL && cellIntersects(minLon, minLat, maxLon, maxLat)) {
+    } else if (level <= detailLevel && cellIntersects(minLon, minLat, maxLon, maxLat)) {
       computeRange(start, (short)(res - 1));
     }
   }
@@ -124,7 +121,7 @@ class GeoPointTermsEnum extends FilteredTermsEnum {
   }
 
   private void nextRange() {
-    currentRange = rangeBounds.removeFirst();
+    currentRange = rangeBounds.remove(0);
     currentLowerBound = currentRange.lower;
     assert currentUpperBound == null || currentUpperBound.compareTo(currentRange.lower) <= 0 :
         "The current upper bound must be <= the new lower bound";
@@ -169,11 +166,13 @@ class GeoPointTermsEnum extends FilteredTermsEnum {
   protected AcceptStatus accept(BytesRef term) {
     // validate value is in range
     while (currentUpperBound == null || term.compareTo(currentUpperBound) > 0) {
-      if (rangeBounds.isEmpty())
+      if (rangeBounds.isEmpty()) {
         return AcceptStatus.END;
+      }
       // peek next sub-range, only seek if the current term is smaller than next lower bound
-      if (term.compareTo(rangeBounds.getFirst().lower) < 0)
+      if (term.compareTo(rangeBounds.get(0).lower) < 0) {
         return AcceptStatus.NO_AND_SEEK;
+      }
       // step forward to next range without seeking, as next lower range bound is less or equal current term
       nextRange();
     }
@@ -190,50 +189,10 @@ class GeoPointTermsEnum extends FilteredTermsEnum {
     return AcceptStatus.YES;
   }
 
-  public static interface ComputedRangesAttribute extends Attribute {
-    public LinkedList<Range> ranges();
-  }
-
-  @SuppressWarnings({"unchecked","rawtypes"})
-  public static final class ComputedRangesAttributeImpl extends AttributeImpl implements ComputedRangesAttribute {
-    public final LinkedList<Range> rangeBounds = new LinkedList();
-
-    @Override
-    public LinkedList<Range> ranges() {
-      return rangeBounds;
-    }
-
-    @Override
-    public void clear() {
-      rangeBounds.clear();
-    }
-
-    @Override
-    public int hashCode() {
-      return rangeBounds.hashCode();
-    }
-
-    @Override
-    public boolean equals(Object other) {
-      if (this == other)
-        return true;
-      if (!(other instanceof ComputedRangesAttributeImpl))
-        return false;
-      return rangeBounds.equals(((ComputedRangesAttributeImpl)other).rangeBounds);
-    }
-
-    @Override
-    public void copyTo(AttributeImpl target) {
-      final List<Range> targetRanges = ((ComputedRangesAttribute)target).ranges();
-      targetRanges.clear();
-      targetRanges.addAll(rangeBounds);
-    }
-  }
-
   /**
    * Internal class to represent a range along the space filling curve
    */
-  private final class Range implements Comparable<Range> {
+  protected final class Range implements Comparable<Range> {
     final BytesRef lower;
     final BytesRef upper;
     final short level;
@@ -251,8 +210,19 @@ class GeoPointTermsEnum extends FilteredTermsEnum {
     }
 
     @Override
-    public final int compareTo(Range other) {
+    public int compareTo(Range other) {
       return this.lower.compareTo(other.lower);
     }
+  }
+
+  /**
+   * Computes the range detail level as a function of the bounding box size. This is currently computed as 5% of the
+   * smallest distance between longitudes or latitudes rounded down to the nearest factor of
+   * {@link org.apache.lucene.document.GeoPointField#PRECISION_STEP}. The detail is currently restricted to a minimum of
+   * 9 and a maximum of 18
+   */
+  private short computeDetailLevel(final double minLon, final double minLat, final double maxLon, final double maxLat) {
+    short level = (short)(StrictMath.log(180.0 / (StrictMath.min(maxLon - minLon, maxLat - minLat) * 0.05)) / GeoUtils.LOG2);
+    return (short)StrictMath.max(MIN_LEVEL, StrictMath.min((level - (level % GeoPointField.PRECISION_STEP)), MAX_LEVEL));
   }
 }

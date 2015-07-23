@@ -166,7 +166,7 @@ public class GeoHashGridParser implements Aggregator.Parser {
                 resize(geoValues.count());
                 for (int i = 0; i < count(); ++i) {
                     GeoPoint target = geoValues.valueAt(i);
-                    values[i] = GeoHashUtils.encodeAsLong(target.getLat(), target.getLon(), precision);
+                    values[i] = org.apache.lucene.util.GeoHashUtils.longEncode(target.getLon(), target.getLat(), precision);
                 }
                 sort();
             }

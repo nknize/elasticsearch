@@ -54,25 +54,21 @@ public final class GeoUtils {
   // shift values for bit interleaving
   private static final short SHIFT[] = {1, 2, 4, 8, 16};
 
-  private static final char[] BASE_32 = {'0', '1', '2', '3', '4', '5', '6',
-          '7', '8', '9', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'j', 'k', 'm', 'n',
-          'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z'};
-
-  private static final String BASE_32_STRING = new String(BASE_32);
+  public static double LOG2 = StrictMath.log(2);
 
   // No instance:
   private GeoUtils() {
   }
 
-  public static final Long mortonHash(final double lon, final double lat) {
+  public static Long mortonHash(final double lon, final double lat) {
     return interleave(scaleLon(lon), scaleLat(lat));
   }
 
-  public static final double mortonUnhashLon(final long hash) {
+  public static double mortonUnhashLon(final long hash) {
     return unscaleLon(deinterleave(hash));
   }
 
-  public static final double mortonUnhashLat(final long hash) {
+  public static double mortonUnhashLat(final long hash) {
     return unscaleLat(deinterleave(hash >>> 1));
   }
 
@@ -132,7 +128,7 @@ public final class GeoUtils {
     return ((b & MAGIC[6]) >>> 1) | ((b & MAGIC[0]) << 1 );
   }
 
-  public static final double compare(final double v1, final double v2) {
+  public static double compare(final double v1, final double v2) {
     final double compare = v1-v2;
     return Math.abs(compare) <= TOLERANCE ? 0 : compare;
   }
@@ -141,82 +137,28 @@ public final class GeoUtils {
    * Puts longitude in range of -180 to +180.
    */
   public static double normalizeLon(double lon_deg) {
-    if (lon_deg >= -180 && lon_deg <= 180)
-      return lon_deg;//common case, and avoids slight double precision shifting
+    if (lon_deg >= -180 && lon_deg <= 180) {
+      return lon_deg; //common case, and avoids slight double precision shifting
+    }
     double off = (lon_deg + 180) % 360;
-    if (off < 0)
+    if (off < 0) {
       return 180 + off;
-    else if (off == 0 && lon_deg > 0)
+    } else if (off == 0 && lon_deg > 0) {
       return 180;
-    else
+    } else {
       return -180 + off;
+    }
   }
 
   /**
    * Puts latitude in range of -90 to 90.
    */
   public static double normalizeLat(double lat_deg) {
-    if (lat_deg >= -90 && lat_deg <= 90)
-      return lat_deg;//common case, and avoids slight double precision shifting
+    if (lat_deg >= -90 && lat_deg <= 90) {
+      return lat_deg; //common case, and avoids slight double precision shifting
+    }
     double off = Math.abs((lat_deg + 90) % 360);
     return (off <= 180 ? off : 360-off) - 90;
-  }
-
-  public static final long toGeoHashLong(final double lon, final double lat, final int level) {
-    // shift to appropriate level
-    final short msf = (short)(((12 - level) * 5) + 2);
-    return flipFlop(mortonHash(lon, lat)) >>> msf;
-  }
-
-  public static final String toGeoHashString(final long hashedVal) {
-    return toGeoHashString(hashedVal, 12);
-  }
-
-  public static final String toGeoHashString(long hashedVal, final int level) {
-    // bit twiddle to geohash (since geohash is a swapped (lon/lat) encoding)
-    hashedVal = flipFlop(hashedVal);
-
-    StringBuilder geoHash = new StringBuilder();
-    short precision = 0;
-    final short msf = (BITS<<1)-5;
-    long mask = 31L<<msf;
-    do {
-      geoHash.append(BASE_32[(int)((mask & hashedVal)>>>(msf-(precision*5)))]);
-      // next 5 bits
-      mask >>>= 5;
-    } while (++precision < level);
-    return geoHash.toString();
-  }
-
-  public static final String toGeoHashString(final double lon, final double lat) {
-    return toGeoHashString(lon, lat, 12);
-  }
-
-  public static final String toGeoHashString(final double lon, final double lat, final int level) {
-    // bit twiddle to geohash (since geohash is a swapped (lon/lat) encoding)
-    final long hashedVal = flipFlop(mortonHash(lon, lat));
-
-    StringBuilder geoHash = new StringBuilder();
-    short precision = 0;
-    final short msf = (BITS<<1)-5;
-    long mask = 31L<<msf;
-    do {
-      geoHash.append(BASE_32[(int)((mask & hashedVal)>>>(msf-(precision*5)))]);
-      // next 5 bits
-      mask >>>= 5;
-    } while (++precision < level);
-    return geoHash.toString();
-  }
-
-  public static final long fromGeoHashString(final String hash) {
-    int level = 11;//hash.length()-1;
-    long b;
-    long l = 0L;
-    for(char c : hash.toCharArray()) {
-      b = (long)(BASE_32_STRING.indexOf(c));
-      l |= (b<<((level--*5)+2));
-    }
-    return flipFlop(l);
   }
 
   public static final boolean bboxContains(final double lon, final double lat, final double minLon,
@@ -258,8 +200,9 @@ public final class GeoUtils {
     for (int i = 0; i < numberOfLeadingZeros; i++) {
       s.append('0');
     }
-    if (term != 0)
+    if (term != 0) {
       s.append(Long.toBinaryString(term));
+    }
     return s.toString();
   }
 
@@ -302,13 +245,14 @@ public final class GeoUtils {
   /**
    * Computes whether a rectangle crosses a shape. (touching not allowed)
    */
-  public static final boolean rectCrossesPoly(final double rMinX, final double rMinY, final double rMaxX,
-                                              final double rMaxY, final double[] shapeX, final double[] shapeY,
-                                              final double sMinX, final double sMinY, final double sMaxX,
-                                              final double sMaxY) {
+  public static boolean rectCrossesPoly(final double rMinX, final double rMinY, final double rMaxX,
+                                        final double rMaxY, final double[] shapeX, final double[] shapeY,
+                                        final double sMinX, final double sMinY, final double sMaxX,
+                                        final double sMaxY) {
     // short-circuit: if the bounding boxes are disjoint then the shape does not cross
-    if (rectDisjoint(rMinX, rMinY, rMaxX, rMaxY, sMinX, sMinY, sMaxX, sMaxY))
+    if (rectDisjoint(rMinX, rMinY, rMaxX, rMaxY, sMinX, sMinY, sMaxX, sMaxY)) {
       return false;
+    }
 
     final double[][] bbox = new double[][] { {rMinX, rMinY}, {rMaxX, rMinY}, {rMaxX, rMaxY}, {rMinX, rMaxY}, {rMinX, rMinY} };
     final int polyLength = shapeX.length-1;
@@ -342,8 +286,9 @@ public final class GeoUtils {
           boolean touching = ((x00 == s && y00 == t) || (x01 == s && y01 == t))
                   || ((x10 == s && y10 == t) || (x11 == s && y11 == t));
           // if line segments are not touching and the intersection point is within the range of either segment
-          if (!(touching || x00 > s || x01 < s || y00 > t || y01 < t || x10 > s || x11 < s || y10 > t || y11 < t))
+          if (!(touching || x00 > s || x01 < s || y00 > t || y01 < t || x10 > s || x11 < s || y10 > t || y11 < t)) {
             return true;
+          }
         }
       } // for each poly edge
     } // for each bbox edge
@@ -359,7 +304,7 @@ public final class GeoUtils {
    * @return a list of lon/lat points representing the circle
    */
   @SuppressWarnings({"unchecked","rawtypes"})
-  public static final ArrayList<double[]> circleToPoly(final double lon, final double lat, final double radius) {
+  public static ArrayList<double[]> circleToPoly(final double lon, final double lat, final double radius) {
     double angle;
     // a little under-sampling (to limit the number of polygonal points): using archimedes estimation of pi
     final int sides = 25;
@@ -397,13 +342,25 @@ public final class GeoUtils {
             !pointInPolygon(shapeX, shapeY, rMaxY, rMaxX) || !pointInPolygon(shapeX, shapeY, rMaxY, rMinX));
   }
 
-  public static boolean rectWithinCircle(final double rMinX, final double rMinY, final double rMaxX, final double rMaxY,
-                                         final double centerLon, final double centerLat, final double radius) {
-    return !(SloppyMath.haversin(centerLat, centerLon, rMinY, rMinX)*1000.0 > radius
+  private static boolean rectAnyCornersOutsideCircle(final double rMinX, final double rMinY, final double rMaxX, final double rMaxY,
+                                                     final double centerLon, final double centerLat, final double radius) {
+    return (SloppyMath.haversin(centerLat, centerLon, rMinY, rMinX)*1000.0 > radius
             || SloppyMath.haversin(centerLat, centerLon, rMaxY, rMinX)*1000.0 > radius
             || SloppyMath.haversin(centerLat, centerLon, rMaxY, rMaxX)*1000.0 > radius
             || SloppyMath.haversin(centerLat, centerLon, rMinY, rMaxX)*1000.0 > radius);
+  }
 
+  private static boolean rectAnyCornersInCircle(final double rMinX, final double rMinY, final double rMaxX, final double rMaxY,
+                                                final double centerLon, final double centerLat, final double radius) {
+    return (SloppyMath.haversin(centerLat, centerLon, rMinY, rMinX)*1000.0 <= radius
+            || SloppyMath.haversin(centerLat, centerLon, rMaxY, rMinX)*1000.0 <= radius
+            || SloppyMath.haversin(centerLat, centerLon, rMaxY, rMaxX)*1000.0 <= radius
+            || SloppyMath.haversin(centerLat, centerLon, rMinY, rMaxX)*1000.0 <= radius);
+  }
+
+  public static boolean rectWithinCircle(final double rMinX, final double rMinY, final double rMaxX, final double rMaxY,
+                                         final double centerLon, final double centerLat, final double radius) {
+    return !(rectAnyCornersOutsideCircle(rMinX, rMinY, rMaxX, rMaxY, centerLon, centerLat, radius));
   }
 
   /**
@@ -411,16 +368,11 @@ public final class GeoUtils {
    */
   public static boolean rectCrossesCircle(final double rMinX, final double rMinY, final double rMaxX, final double rMaxY,
                                           final double centerLon, final double centerLat, final double radius) {
-    return lineCrossesPointRadius(rMinX, rMinY, rMaxX, rMinY, centerLon, centerLat, radius)
-            || lineCrossesPointRadius(rMaxX, rMinY, rMaxX, rMaxY, centerLon, centerLat, radius)
-            || lineCrossesPointRadius(rMaxX, rMaxY, rMinX, rMaxY, centerLon, centerLat, radius)
-            || lineCrossesPointRadius(rMinX, rMaxY, rMinX, rMinY, centerLon, centerLat, radius);
-  }
-
-  private static boolean lineCrossesPointRadius(final double x1, final double y1, final double x2, final double y2,
-                                                final double centerX, final double centerY, final double radius) {
-    return (x1 - x2 < 90.0) ? lineCrossesCircle(x1, y1, x2, y2, centerX, centerY, radius) :
-            lineCrossesSphere(x1, y1, 0, x2, y2, 0, centerX, centerY, 0, radius);
+    return rectAnyCornersInCircle(rMinX, rMinY, rMaxX, rMaxY, centerLon, centerLat, radius)
+            || lineCrossesSphere(rMinX, rMinY, 0, rMaxX, rMinY, 0, centerLon, centerLat, 0, radius)
+            || lineCrossesSphere(rMaxX, rMinY, 0, rMaxX, rMaxY, 0, centerLon, centerLat, 0, radius)
+            || lineCrossesSphere(rMaxX, rMaxY, 0, rMinX, rMaxY, 0, centerLon, centerLat, 0, radius)
+            || lineCrossesSphere(rMinX, rMaxY, 0, rMinX, rMinY, 0, centerLon, centerLat, 0, radius);
   }
 
   /**
@@ -458,46 +410,18 @@ public final class GeoUtils {
     final double c = (fX*fX + fY*fY + fZ*fZ) - (radius*radius);
 
     double discrim = (b*b)-(4*a*c);
-    if (discrim < 0)
+    if (discrim < 0) {
       return false;
+    }
 
     discrim = StrictMath.sqrt(discrim);
     final double a2 = 2*a;
     final double t1 = (-b - discrim)/a2;
     final double t2 = (-b + discrim)/a2;
 
-    if ( (t1 < 0 || t1 > 1) )
+    if ( (t1 < 0 || t1 > 1) ) {
       return !(t2 < 0 || t2 > 1);
-
-    return true;
-  }
-
-  /**
-   * Computes whether a line crosses a circle. That is, one point is inside and one is outside, or the line is a secant
-   */
-  private static boolean lineCrossesCircle(final double x1, final double y1, final double x2, final double y2,
-                                           final double centerX, final double centerY, double radius) {
-    final double dX = x2 - x1;
-    final double dY = y2 - y1;
-    final double fX = x1 - centerX;
-    final double fY = y1 - centerY;
-    radius /= 1000.0;
-    final double a = dX*dX + dY*dY;
-    final double b = 2 * fX*dX + fY*dY;
-    final double c = fX*fX + fY*fY - radius*radius;
-
-    double discrim = b*b-4*a*c;
-    if (discrim < 0)
-      return false;
-
-    discrim = StrictMath.sqrt(discrim);
-    final double a2 = 2*a;
-    final double t1 = (-b - discrim)/a2;
-    final double t2 = (-b + discrim)/a2;
-
-
-    if ( (t1 < 0 || t1 > 1) )
-      return !(t2 < 0 || t2 > 1);
+    }
 
     return true;
   }

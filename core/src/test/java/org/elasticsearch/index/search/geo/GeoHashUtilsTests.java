@@ -40,10 +40,10 @@ public class GeoHashUtilsTests extends ElasticsearchTestCase {
      */
     @Test
     public void testEncode() {
-        String hash = GeoUtils.toGeoHashString(-5.6, 42.6, 12);
+        String hash = org.apache.lucene.util.GeoHashUtils.stringEncode(-5.6, 42.6, 12);
         assertEquals("ezs42e44yx96", hash);
 
-        hash = GeoUtils.toGeoHashString(10.40744, 57.64911, 12);
+        hash = org.apache.lucene.util.GeoHashUtils.stringEncode(10.40744, 57.64911, 12);
         assertEquals("u4pruydqqvj8", hash);
     }
 
@@ -53,7 +53,7 @@ public class GeoHashUtilsTests extends ElasticsearchTestCase {
      */
     @Test
     public void testDecodePreciseLongitudeLatitude() {
-        String hash = GeoHashUtils.encode(52.3738007, 4.8909347);
+        String hash = org.apache.lucene.util.GeoHashUtils.stringEncode(4.8909347, 52.3738007);
 
         GeoPoint point = GeoHashUtils.decode(hash);
 
@@ -67,7 +67,7 @@ public class GeoHashUtilsTests extends ElasticsearchTestCase {
      */
     @Test
     public void testDecodeImpreciseLongitudeLatitude() {
-        String hash = GeoHashUtils.encode(84.6, 10.5);
+        String hash = org.apache.lucene.util.GeoHashUtils.stringEncode(10.5, 84.6);
 
         GeoPoint point = GeoHashUtils.decode(hash);
 
@@ -82,12 +82,12 @@ public class GeoHashUtilsTests extends ElasticsearchTestCase {
     @Test
     public void testDecodeEncode() {
         String geoHash = "u173zq37x014";
-        assertEquals(geoHash, GeoUtils.toGeoHashString(4.8909347, 52.3738007));
+        assertEquals(geoHash, org.apache.lucene.util.GeoHashUtils.stringEncode(4.8909347, 52.3738007));
         GeoPoint decode = GeoHashUtils.decode(geoHash);
         assertEquals(52.37380061d, decode.lat(), 0.000001d);
         assertEquals(4.8909343d, decode.lon(), 0.000001d);
 
-        assertEquals(geoHash, GeoUtils.toGeoHashString(decode.lon(), decode.lat()));
+        assertEquals(geoHash, org.apache.lucene.util.GeoHashUtils.stringEncode(decode.lon(), decode.lat()));
     }
 
     @Test

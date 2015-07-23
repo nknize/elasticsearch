@@ -19,10 +19,10 @@
 
 package org.elasticsearch.search.geo;
 
+import org.apache.lucene.util.GeoHashUtils;
 import org.elasticsearch.action.index.IndexRequestBuilder;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.common.geo.GeoDistance;
-import org.elasticsearch.common.geo.GeoHashUtils;
 import org.elasticsearch.common.unit.DistanceUnit;
 import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.common.xcontent.XContentFactory;
@@ -658,7 +658,7 @@ public class GeoDistanceTests extends ElasticsearchIntegrationTest {
 
         XContentBuilder source = JsonXContent.contentBuilder()
                 .startObject()
-                    .field("pin", GeoHashUtils.encode(lat, lon))
+                    .field("pin", GeoHashUtils.stringEncode(lon, lat))
                 .endObject();
 
         assertAcked(prepareCreate("locations").addMapping("location", mapping));

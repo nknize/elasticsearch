@@ -1,23 +1,21 @@
-/*
- * Licensed to Elasticsearch under one or more contributor
- * license agreements. See the NOTICE file distributed with
- * this work for additional information regarding copyright
- * ownership. Elasticsearch licenses this file to you under
- * the Apache License, Version 2.0 (the "License"); you may
- * not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *    http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- */
-
 package org.apache.lucene.util;
+
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 
 /**
  * Reusable geo-spatial projection utility methods.
@@ -49,8 +47,9 @@ public class GeoProjectionUtils {
     final double ep2 = (SEMIMAJOR_AXIS2 - SEMIMINOR_AXIS2)/(SEMIMINOR_AXIS2);
     final double cos67P5 = 0.38268343236508977D;
 
-    if (lla == null)
+    if (lla == null) {
       lla = new double[3];
+    }
 
     if (x != 0.0) {
       lla[0] = StrictMath.atan2(y,x);
@@ -121,15 +120,16 @@ public class GeoProjectionUtils {
     final double cl = StrictMath.cos(lat);
     final double ge2 = (SEMIMAJOR_AXIS2 - SEMIMINOR_AXIS2)/(SEMIMAJOR_AXIS2);
 
-    if (ecf == null)
+    if (ecf == null) {
       ecf = new double[3];
+    }
 
     if (lat < -PI_OVER_2 && lat > -1.001D * PI_OVER_2) {
       lat = -PI_OVER_2;
     } else if (lat > PI_OVER_2 && lat < 1.001D * PI_OVER_2) {
       lat = PI_OVER_2;
     }
-    assert ((lat >= -PI_OVER_2) || (lat <= PI_OVER_2));
+    assert (lat >= -PI_OVER_2) || (lat <= PI_OVER_2);
 
     if (lon > StrictMath.PI) {
       lon -= (2*StrictMath.PI);
@@ -156,8 +156,9 @@ public class GeoProjectionUtils {
    */
   public static double[] llaToENU(final double lon, final double lat, final double alt, double centerLon,
                                   double centerLat, final double centerAlt, double[] enu) {
-    if (enu == null)
+    if (enu == null) {
       enu = new double[3];
+    }
 
     // convert point to ecf coordinates
     final double[] ecf = llaToECF(lon, lat, alt, null);
@@ -180,8 +181,9 @@ public class GeoProjectionUtils {
   public static double[] enuToLLA(final double x, final double y, final double z, final double centerLon,
                                   final double centerLat, final double centerAlt, double[] lla) {
     // convert enuToECF
-    if (lla == null)
+    if (lla == null) {
       lla = new double[3];
+    }
 
     // convert enuToECF, storing intermediate result in lla
     lla = enuToECF(x, y, z, centerLon, centerLat, centerAlt, lla);
@@ -203,8 +205,9 @@ public class GeoProjectionUtils {
    */
   public static double[] ecfToENU(double x, double y, double z, final double centerLon,
                                   final double centerLat, final double centerAlt, double[] enu) {
-    if (enu == null)
+    if (enu == null) {
       enu = new double[3];
+    }
 
     // create rotation matrix and rotate to enu orientation
     final double[][] phi = createPhiTransform(centerLon, centerLat, null);
@@ -237,8 +240,9 @@ public class GeoProjectionUtils {
    */
   public static double[] enuToECF(final double x, final double y, final double z, double centerLon,
                                   double centerLat, final double centerAlt, double[] ecf) {
-    if (ecf == null)
+    if (ecf == null) {
       ecf = new double[3];
+    }
 
     double[][] phi = createTransposedPhiTransform(centerLon, centerLat, null);
     double[] ecfOrigin = llaToECF(centerLon, centerLat, centerAlt, null);
@@ -259,8 +263,10 @@ public class GeoProjectionUtils {
    * @return phi rotation matrix
    */
   private static double[][] createPhiTransform(double originLon, double originLat, double[][] phiMatrix) {
-    if (phiMatrix == null)
+
+    if (phiMatrix == null) {
       phiMatrix = new double[3][3];
+    }
 
     originLon = StrictMath.toRadians(originLon);
     originLat = StrictMath.toRadians(originLat);
@@ -291,8 +297,10 @@ public class GeoProjectionUtils {
    * @return transposed phi rotation matrix
    */
   private static double[][] createTransposedPhiTransform(double originLon, double originLat, double[][] phiMatrix) {
-    if (phiMatrix == null)
+
+    if (phiMatrix == null) {
       phiMatrix = new double[3][3];
+    }
 
     originLon = StrictMath.toRadians(originLon);
     originLat = StrictMath.toRadians(originLat);
@@ -326,11 +334,10 @@ public class GeoProjectionUtils {
    * @return the point along a bearing at a given distance in meters
    */
   public static final double[] pointFromLonLatBearing(double lon, double lat, double bearing, double dist, double[] pt) {
-    if (pt == null)
-      pt = new double[2];
 
-//    // convert from kilometers to meters
-//    dist *= 1000;
+    if (pt == null) {
+      pt = new double[2];
+    }
 
     final double alpha1 = StrictMath.toRadians(bearing);
     final double cosA1 = StrictMath.cos(alpha1);
@@ -355,19 +362,19 @@ public class GeoProjectionUtils {
       cosSigma = StrictMath.cos(sigma);
 
       deltaSigma = B * sinSigma * (cos2SigmaM + (B/4D) * (cosSigma*(-1+2*cos2SigmaM*cos2SigmaM)-
-              (B/6) * cos2SigmaM*(-3+4*sinSigma*sinSigma)*(-3+4*cos2SigmaM*cos2SigmaM)));
+          (B/6) * cos2SigmaM*(-3+4*sinSigma*sinSigma)*(-3+4*cos2SigmaM*cos2SigmaM)));
       sigmaP = sigma;
       sigma = dist / (SEMIMINOR_AXIS*A) + deltaSigma;
     } while (StrictMath.abs(sigma-sigmaP) > 1E-12);
 
     final double tmp = sinU1*sinSigma - cosU1*cosSigma*cosA1;
     final double lat2 = StrictMath.atan2(sinU1*cosSigma + cosU1*sinSigma*cosA1,
-            (1-FLATTENING) * StrictMath.sqrt(sinAlpha*sinAlpha + tmp*tmp));
+        (1-FLATTENING) * StrictMath.sqrt(sinAlpha*sinAlpha + tmp*tmp));
     final double lambda = StrictMath.atan2(sinSigma*sinA1, cosU1*cosSigma - sinU1*sinSigma*cosA1);
     final double c = FLATTENING/16 * cosSqAlpha * (4 + FLATTENING * (4 - 3 * cosSqAlpha));
 
     final double lam = lambda - (1-c) * FLATTENING * sinAlpha *
-            (sigma + c * sinSigma * (cos2SigmaM + c * cosSigma * (-1 + 2* cos2SigmaM*cos2SigmaM)));
+        (sigma + c * sinSigma * (cos2SigmaM + c * cosSigma * (-1 + 2* cos2SigmaM*cos2SigmaM)));
     pt[0] = lon + StrictMath.toDegrees(lam);
     pt[1] = StrictMath.toDegrees(lat2);
 

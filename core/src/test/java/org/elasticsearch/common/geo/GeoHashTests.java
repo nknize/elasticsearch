@@ -18,8 +18,7 @@
  */
 package org.elasticsearch.common.geo;
 
-import org.apache.lucene.util.*;
-import org.apache.lucene.util.GeoUtils;
+import org.apache.lucene.util.GeoHashUtils;
 import org.elasticsearch.test.ElasticsearchTestCase;
 import org.junit.Test;
 
@@ -43,14 +42,23 @@ public class GeoHashTests extends ElasticsearchTestCase {
             {
                 for(int p=1;p<=12;p++)
                 {
-                    long geoAsLong = GeoHashUtils.encodeAsLong(lat,lng,p);
-                    String geohash = org.apache.lucene.util.GeoUtils.toGeoHashString(lng, lat, p);
-                    
-                    String geohashFromLong=GeoHashUtils.toString(geoAsLong);
+                    long geoAsLong = GeoHashUtils.longEncode(lng, lat, p);
+
+                    // string encode from geohashlong encoded location
+                    String geohashFromLong = GeoHashUtils.stringEncode(geoAsLong);
+
+                    // string encode from full res lat lon
+                    String geohash = GeoHashUtils.stringEncode(lng, lat, p);
+
+                    // ensure both strings are the same
                     assertEquals(geohash, geohashFromLong);
-                    GeoPoint pos=GeoHashUtils.decode(geohash);
-                    GeoPoint pos2=GeoHashUtils.decode(geoAsLong);
-                    assertEquals(pos, pos2);
+
+                    // decode from the full-res geohash string
+                    GeoPoint expected = org.elasticsearch.common.geo.GeoHashUtils.decode(geohash);
+                    // decode from the geohash encoded long
+                    GeoPoint actual = org.elasticsearch.common.geo.GeoHashUtils.decode(geoAsLong);
+
+                    assertEquals(expected, actual);
                 }
             }
             

@@ -43,7 +43,7 @@ import org.apache.lucene.util.GeoUtils;
  * @lucene.experimental
  */
 public final class GeoPointField extends Field {
-  public static final int PRECISION_STEP = 6;
+  public static final int PRECISION_STEP = 3;
 
   /**
    * Type for an GeoPointField that is not stored:

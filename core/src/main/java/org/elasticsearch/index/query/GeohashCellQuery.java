@@ -126,7 +126,7 @@ public class GeohashCellQuery {
         }
 
         public Builder point(double lat, double lon) {
-            this.geohash = org.apache.lucene.util.GeoUtils.toGeoHashString(lon, lat);
+            this.geohash = org.apache.lucene.util.GeoHashUtils.stringEncode(lon, lat);
             return this;
         }
 

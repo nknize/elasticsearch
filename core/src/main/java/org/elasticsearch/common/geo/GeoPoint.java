@@ -99,11 +99,11 @@ public final class GeoPoint {
     }
 
     public final String geohash() {
-        return GeoUtils.toGeoHashString(lon, lat);
+        return org.apache.lucene.util.GeoHashUtils.stringEncode(lon, lat);
     }
 
     public final String getGeohash() {
-        return GeoUtils.toGeoHashString(lon, lat);
+        return org.apache.lucene.util.GeoHashUtils.stringEncode(lon, lat);
     }
 
     @Override

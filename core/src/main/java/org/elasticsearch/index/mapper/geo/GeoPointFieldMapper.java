@@ -24,6 +24,7 @@ import com.carrotsearch.hppc.cursors.ObjectCursor;
 import com.google.common.collect.Iterators;
 import org.apache.lucene.document.Field;
 import org.apache.lucene.document.FieldType;
+import org.apache.lucene.util.GeoHashUtils;
 import org.apache.lucene.document.GeoPointField;
 import org.apache.lucene.index.IndexOptions;
 import org.apache.lucene.util.BytesRef;
@@ -31,7 +32,6 @@ import org.apache.lucene.util.NumericUtils;
 import org.elasticsearch.Version;
 import org.elasticsearch.common.Strings;
 import org.elasticsearch.common.geo.GeoDistance;
-import org.elasticsearch.common.geo.GeoHashUtils;
 import org.elasticsearch.common.geo.GeoPoint;
 import org.elasticsearch.common.geo.GeoUtils;
 import org.elasticsearch.common.settings.Settings;
@@ -108,7 +108,7 @@ public class GeoPointFieldMapper extends FieldMapper implements ArrayValueMapper
             FIELD_TYPE.setTokenized(false);
             FIELD_TYPE.setOmitNorms(true);
             FIELD_TYPE.setNumericType(FieldType.NumericType.LONG);
-            FIELD_TYPE.setNumericPrecisionStep(6);
+            FIELD_TYPE.setNumericPrecisionStep(GeoPointField.PRECISION_STEP);
             FIELD_TYPE.setHasDocValues(false);
             FIELD_TYPE.setStored(true);
             FIELD_TYPE.freeze();
@@ -711,7 +711,7 @@ public class GeoPointFieldMapper extends FieldMapper implements ArrayValueMapper
         }
         if (fieldType().isGeohashEnabled()) {
             if (geohash == null) {
-                geohash = GeoHashUtils.encode(point.lat(), point.lon());
+                geohash = GeoHashUtils.stringEncode(point.lon(), point.lat());
             }
             addGeohashField(context, geohash);
         }

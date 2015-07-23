@@ -66,7 +66,7 @@ public class ShardReduceTests extends ElasticsearchIntegrationTest {
                 .startObject()
                 .field("value", value)
                 .field("ip", "10.0.0." + value)
-                .field("location", GeoUtils.toGeoHashString(5, 52, 12))
+                .field("location", org.apache.lucene.util.GeoHashUtils.stringEncode(5, 52, 12))
                 .field("date", date)
                 .field("term-l", 1)
                 .field("term-d", 1.5)

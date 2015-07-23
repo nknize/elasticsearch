@@ -86,13 +86,14 @@ public class GeoHashGridTests extends ElasticsearchIntegrationTest {
             //generate random point
             double lat = (180d * random.nextDouble()) - 90d;
             double lng = (360d * random.nextDouble()) - 180d;
-            String randomGeoHash = GeoUtils.toGeoHashString(lng, lat, highestPrecisionGeohash);
+            String randomGeoHash = org.apache.lucene.util.GeoHashUtils.stringEncode(lng, lat, highestPrecisionGeohash);
+            System.out.println(randomGeoHash + " (" + lng + ", " + lat + ")");
             //Index at the highest resolution
             cities.add(indexCity("idx", randomGeoHash, lat + ", " + lng));
             expectedDocCountsForGeoHash.put(randomGeoHash, expectedDocCountsForGeoHash.getOrDefault(randomGeoHash, 0) + 1);
             //Update expected doc counts for all resolutions..
             for (int precision = highestPrecisionGeohash - 1; precision > 0; precision--) {
-                String hash = GeoUtils.toGeoHashString(lng, lat, precision);
+                String hash = org.apache.lucene.util.GeoHashUtils.stringEncode(lng, lat, precision);
                 if ((smallestGeoHash == null) || (hash.length() < smallestGeoHash.length())) {
                     smallestGeoHash = hash;
                 }
@@ -116,7 +117,7 @@ public class GeoHashGridTests extends ElasticsearchIntegrationTest {
                 points.add(lat + "," + lng);
                 // Update expected doc counts for all resolutions..
                 for (int precision = highestPrecisionGeohash; precision > 0; precision--) {
-                    final String geoHash = GeoUtils.toGeoHashString(lng, lat, precision);
+                    final String geoHash = org.apache.lucene.util.GeoHashUtils.stringEncode(lng, lat, precision);
                     geoHashes.add(geoHash);
                 }
             }
@@ -157,7 +158,7 @@ public class GeoHashGridTests extends ElasticsearchIntegrationTest {
                 assertEquals("Geohash " + geohash + " has wrong doc count ",
                         expectedBucketCount, bucketCount);
                 GeoPoint geoPoint = (GeoPoint) propertiesKeys[i];
-                assertThat(GeoUtils.toGeoHashString(geoPoint.lon(), geoPoint.lat(), precision), equalTo(geohash));
+                assertThat(org.apache.lucene.util.GeoHashUtils.stringEncode(geoPoint.lon(), geoPoint.lat(), precision), equalTo(geohash));
                 assertThat((long) propertiesDocCounts[i], equalTo(bucketCount));
             }
         }
