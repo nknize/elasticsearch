@@ -212,7 +212,7 @@ public class GeoPointFieldMapper extends FieldMapper implements ArrayValueMapper
             fieldType.setTokenized(false);
             setupFieldType(context);
 
-            return new GeoPointFieldMapper(fieldType, docValues, fieldDataSettings, context.indexSettings(), origPathType,
+            return new GeoPointFieldMapper(name, fieldType, defaultFieldType, context.indexSettings(), origPathType,
                      latMapper, lonMapper, geohashMapper, multiFieldsBuilder.build(this, context), copyTo);
         }
     }
@@ -593,10 +593,10 @@ public class GeoPointFieldMapper extends FieldMapper implements ArrayValueMapper
 
     private final StringFieldMapper geohashMapper;
 
-    public GeoPointFieldMapper(MappedFieldType fieldType, Boolean docValues, @Nullable Settings fieldDataSettings, Settings indexSettings,
-            ContentPath.Type pathType, DoubleFieldMapper latMapper, DoubleFieldMapper lonMapper, StringFieldMapper geohashMapper,
-            MultiFields multiFields, CopyTo copyTo) {
-        super(fieldType, docValues, fieldDataSettings, indexSettings, multiFields, copyTo);
+    public GeoPointFieldMapper(String simpleName, MappedFieldType fieldType, MappedFieldType defaultFieldType, Settings indexSettings,
+                               ContentPath.Type pathType, DoubleFieldMapper latMapper, DoubleFieldMapper lonMapper,
+                               StringFieldMapper geohashMapper, MultiFields multiFields, CopyTo copyTo) {
+        super(simpleName, fieldType, defaultFieldType, indexSettings, multiFields, copyTo);
         this.pathType = pathType;
         this.latMapper = latMapper;
         this.lonMapper = lonMapper;
@@ -704,10 +704,10 @@ public class GeoPointFieldMapper extends FieldMapper implements ArrayValueMapper
             }
         }
 
-        if (fieldType.indexOptions() != IndexOptions.NONE || fieldType.stored()) {
+        if (fieldType().indexOptions() != IndexOptions.NONE || fieldType().stored()) {
 //            Field field = new Field(fieldType.names().indexName(), Double.toString(point.lat()) + ',' + Double.toString(point.lon()), fieldType);
 //            context.doc().add(field);
-            context.doc().add(new GeoPointField(fieldType.names().indexName(), point.lon(), point.lat(), fieldType ));
+            context.doc().add(new GeoPointField(fieldType().names().indexName(), point.lon(), point.lat(), fieldType() ));
         }
         if (fieldType().isGeohashEnabled()) {
             if (geohash == null) {
