@@ -106,17 +106,6 @@ public class GeoHashUtils {
         return geoHash.toString();
     }
 
-//    public static final long mortonEncode(final String hash) {
-//        int level = hash.length()-1;
-//        long b;
-//        long l = 0L;
-//        for(char c : hash.toCharArray()) {
-//            b = (long)(BASE_32_STRING.indexOf(c));
-//            l |= (b<<((level--*5)+2));
-//        }
-//        return GeoUtils.flipFlop(l);
-//    }
-
     public static final long mortonEncode(final String hash) {
         int level = 11;
         long b;

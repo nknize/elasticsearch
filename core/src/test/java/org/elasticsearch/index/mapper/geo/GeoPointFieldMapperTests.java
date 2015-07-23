@@ -392,7 +392,7 @@ public class GeoPointFieldMapperTests extends ElasticsearchSingleNodeTest {
         assertThat(doc.rootDoc().getFields("point.lat")[1].numericValue().doubleValue(), equalTo(1.4));
         assertThat(doc.rootDoc().getFields("point.lon")[1].numericValue().doubleValue(), equalTo(1.5));
         hash = GeoUtils.mortonHash(1.5, 1.4);
-        assertThat(Long.parseLong(doc.rootDoc().getFields("point")[1].stringValue()), equalTo(hash));
+        assertThat(Long.parseLong(doc.rootDoc().getFields("point")[2].stringValue()), equalTo(hash));
     }
 
     @Test
