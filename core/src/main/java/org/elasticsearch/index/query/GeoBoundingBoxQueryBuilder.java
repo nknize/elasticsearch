@@ -54,9 +54,9 @@ public class GeoBoundingBoxQueryBuilder extends AbstractQueryBuilder<GeoBounding
     /** Name of field holding geo coordinates to compute the bounding box on.*/
     private final String fieldName;
     /** Top left corner coordinates of bounding box. */
-    private GeoPoint topLeft = new GeoPoint(Double.NaN, Double.NaN);
+    private final GeoPoint topLeft; // = new GeoPoint(Double.NaN, Double.NaN);
     /** Bottom right corner coordinates of bounding box.*/
-    private GeoPoint bottomRight = new GeoPoint(Double.NaN, Double.NaN);
+    private final GeoPoint bottomRight; // = new GeoPoint(Double.NaN, Double.NaN);
     /** How to deal with incorrect coordinates.*/
     private GeoValidationMethod validationMethod = GeoValidationMethod.DEFAULT;
     /** How the query should be run. */

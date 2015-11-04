@@ -417,7 +417,7 @@ public class GeoPointFieldMapper extends FieldMapper implements ArrayValueMapper
             if (value instanceof GeoPoint) {
                 return (GeoPoint) value;
             } else {
-                return GeoPoint.parseFromLatLon(value.toString());
+                return GeoPoint.mutable(value.toString());
             }
         }
     }
@@ -616,12 +616,12 @@ public class GeoPointFieldMapper extends FieldMapper implements ArrayValueMapper
         context.path().pathType(pathType);
         context.path().add(simpleName());
 
-        GeoPoint sparse = context.parseExternalValue(GeoPoint.class);
+        GeoPoint.Mutable sparse = context.parseExternalValue(GeoPoint.Mutable.class);
         
         if (sparse != null) {
             parse(context, sparse, null);
         } else {
-            sparse = new GeoPoint();
+            sparse = GeoPoint.mutable();
             XContentParser.Token token = context.parser().currentToken();
             if (token == XContentParser.Token.START_ARRAY) {
                 token = context.parser().nextToken();
@@ -672,7 +672,7 @@ public class GeoPointFieldMapper extends FieldMapper implements ArrayValueMapper
         }
     }
 
-    private void parsePointFromString(ParseContext context, GeoPoint sparse, String point) throws IOException {
+    private void parsePointFromString(ParseContext context, GeoPoint.Mutable sparse, String point) throws IOException {
         if (point.indexOf(',') < 0) {
             parse(context, sparse.resetFromGeoHash(point), point);
         } else {
@@ -680,7 +680,7 @@ public class GeoPointFieldMapper extends FieldMapper implements ArrayValueMapper
         }
     }
 
-    private void parse(ParseContext context, GeoPoint point, String geohash) throws IOException {
+    private void parse(ParseContext context, GeoPoint.Mutable point, String geohash) throws IOException {
         boolean validPoint = false;
         if (coerce.value() == false && ignoreMalformed.value() == false) {
             if (point.lat() > 90.0 || point.lat() < -90.0) {

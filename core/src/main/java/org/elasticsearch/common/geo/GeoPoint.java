@@ -16,99 +16,34 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-
 package org.elasticsearch.common.geo;
 
-import org.apache.lucene.util.BitUtil;
-import org.apache.lucene.util.GeoHashUtils;
+import org.apache.lucene.util.*;
 import org.apache.lucene.util.GeoUtils;
 
 /**
- *
+ * Immutable by default
  */
-public final class GeoPoint {
-
+abstract public class GeoPoint {
     private double lat;
     private double lon;
 
-    public GeoPoint() {
+    // simple constructor
+    private GeoPoint() {
     }
 
-    /**
-     * Create a new Geopointform a string. This String must either be a geohash
-     * or a lat-lon tuple.
-     *
-     * @param value String to create the point from
-     */
-    public GeoPoint(String value) {
-        this.resetFromString(value);
-    }
-
+    // constructor with value
     public GeoPoint(double lat, double lon) {
         this.lat = lat;
         this.lon = lon;
     }
 
-    public GeoPoint(GeoPoint template) {
-        this(template.getLat(), template.getLon());
-    }
-
-    public GeoPoint reset(double lat, double lon) {
-        this.lat = lat;
-        this.lon = lon;
-        return this;
-    }
-
-    public GeoPoint resetLat(double lat) {
-        this.lat = lat;
-        return this;
-    }
-
-    public GeoPoint resetLon(double lon) {
-        this.lon = lon;
-        return this;
-    }
-
-    public GeoPoint resetFromString(String value) {
-        int comma = value.indexOf(',');
-        if (comma != -1) {
-            lat = Double.parseDouble(value.substring(0, comma).trim());
-            lon = Double.parseDouble(value.substring(comma + 1).trim());
-        } else {
-            resetFromGeoHash(value);
-        }
-        return this;
-    }
-
-    public GeoPoint resetFromIndexHash(long hash) {
-        lon = GeoUtils.mortonUnhashLon(hash);
-        lat = GeoUtils.mortonUnhashLat(hash);
-        return this;
-    }
-
-    public GeoPoint resetFromGeoHash(String geohash) {
-        final long hash = GeoHashUtils.mortonEncode(geohash);
-        return this.reset(GeoUtils.mortonUnhashLat(hash), GeoUtils.mortonUnhashLon(hash));
-    }
-
-    public GeoPoint resetFromGeoHash(long geohashLong) {
-        final int level = (int)(12 - (geohashLong&15));
-        return this.resetFromIndexHash(BitUtil.flipFlop((geohashLong >>> 4) << ((level * 5) + 2)));
-    }
-
+    // getters
     public final double lat() {
         return this.lat;
     }
 
-    public final double getLat() {
-        return this.lat;
-    }
-
     public final double lon() {
-        return this.lon;
-    }
-
-    public final double getLon() {
         return this.lon;
     }
 
@@ -118,6 +53,72 @@ public final class GeoPoint {
 
     public final String getGeohash() {
         return GeoHashUtils.stringEncode(lon, lat);
+    }
+
+    // setters
+    public final void lat(double lat) {
+        assert isMutable();
+        this.lat = lat;
+    }
+
+    // set lon
+    public final void lon(double lon) {
+        assert isMutable();
+        this.lon = lon;
+    }
+
+    public GeoPoint reset(double lat, double lon) {
+        assert isMutable();
+        this.lat = lat;
+        this.lon = lon;
+        return this;
+    }
+
+    public GeoPoint resetLat(double lat) {
+        assert isMutable();
+        this.lat = lat;
+        return this;
+    }
+
+    public GeoPoint resetLon(double lon) {
+        assert isMutable();
+        this.lon = lon;
+        return this;
+    }
+
+    public GeoPoint resetFromString(String value) {
+        assert isMutable();
+        int comma = value.indexOf(',');
+        if (comma != -1) {
+            this.lat = Double.parseDouble(value.substring(0, comma).trim());
+            this.lon = Double.parseDouble(value.substring(comma + 1).trim());
+        } else {
+            resetFromGeoHash(value);
+        }
+        return this;
+    }
+
+    public GeoPoint resetFromIndexHash(long hash) {
+        assert isMutable();
+        this.lon = org.apache.lucene.util.GeoUtils.mortonUnhashLon(hash);
+        this.lat = GeoUtils.mortonUnhashLat(hash);
+        return this;
+    }
+
+    private GeoPoint resetFromGeoHash(String geohash) {
+        assert isMutable();
+        final long hash = GeoHashUtils.mortonEncode(geohash);
+        return this.reset(org.apache.lucene.util.GeoUtils.mortonUnhashLat(hash), org.apache.lucene.util.GeoUtils.mortonUnhashLon(hash));
+    }
+
+    public GeoPoint resetFromGeoHash(long geohashLong) {
+        assert isMutable();
+        final int level = (int)(12 - (geohashLong&15));
+        return this.resetFromIndexHash(BitUtil.flipFlop((geohashLong >>> 4) << ((level * 5) + 2)));
+    }
+
+    private boolean isMutable() {
+        return this instanceof Mutable;
     }
 
     @Override
@@ -149,20 +150,58 @@ public final class GeoPoint {
         return "[" + lat + ", " + lon + "]";
     }
 
-    public static GeoPoint parseFromLatLon(String latLon) {
-        GeoPoint point = new GeoPoint(latLon);
-        return point;
+    /**
+     * Immutable GeoPoint
+     */
+    public static class Immutable extends GeoPoint {
+        private Immutable() {
+            super();
+        }
+
+        private Immutable(double lat, double lon) {
+            super(lat, lon);
+        }
     }
 
-    public static GeoPoint fromGeohash(String geohash) {
-        return new GeoPoint().resetFromGeoHash(geohash);
+    /**
+     * Mutable GeoPoint
+     */
+    public static class Mutable extends GeoPoint {
+        // simple xtor
+        private Mutable() {
+            super();
+        }
+
+        // xtor with value
+        private Mutable(double lat, double lon) {
+            super(lat, lon);
+        }
+
+        // xtor with template
+        public Mutable(Mutable template) {
+            this(template.lat(), template.lon());
+        }
+
+        public Mutable(String value) {
+            this.resetFromString(value);
+        }
     }
 
-    public static GeoPoint fromGeohash(long geohashLong) {
-        return new GeoPoint().resetFromGeoHash(geohashLong);
+    // factory creator for immutable
+    public static final Immutable immutable(double lat, double lon) {
+        return new Immutable(lat, lon);
     }
 
-    public static GeoPoint fromIndexLong(long indexLong) {
-        return new GeoPoint().resetFromIndexHash(indexLong);
+    // factory creator for mutable
+    public static final Mutable mutable() {
+        return new Mutable();
+    }
+
+    public static final Mutable mutable(double lat, double lon) {
+        return new Mutable(lat, lon);
+    }
+
+    public static final Mutable mutable(String value) {
+        return new Mutable(value);
     }
 }
