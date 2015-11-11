@@ -221,19 +221,19 @@ public class InternalGeoBounds extends InternalMetricsAggregation implements Geo
         if (Double.isInfinite(top)) {
             return null;
         } else if (Double.isInfinite(posLeft)) {
-            return new BoundingBox(new GeoPoint(top, negLeft), new GeoPoint(bottom, negRight));
+            return new BoundingBox(GeoPoint.immutable(top, negLeft), GeoPoint.immutable(bottom, negRight));
         } else if (Double.isInfinite(negLeft)) {
-            return new BoundingBox(new GeoPoint(top, posLeft), new GeoPoint(bottom, posRight));
+            return new BoundingBox(GeoPoint.immutable(top, posLeft), GeoPoint.immutable(bottom, posRight));
         } else if (wrapLongitude) {
             double unwrappedWidth = posRight - negLeft;
             double wrappedWidth = (180 - posLeft) - (-180 - negRight);
             if (unwrappedWidth <= wrappedWidth) {
-                return new BoundingBox(new GeoPoint(top, negLeft), new GeoPoint(bottom, posRight));
+                return new BoundingBox(GeoPoint.immutable(top, negLeft), GeoPoint.immutable(bottom, posRight));
             } else {
-                return new BoundingBox(new GeoPoint(top, posLeft), new GeoPoint(bottom, negRight));
+                return new BoundingBox(GeoPoint.immutable(top, posLeft), GeoPoint.immutable(bottom, negRight));
             }
         } else {
-            return new BoundingBox(new GeoPoint(top, negLeft), new GeoPoint(bottom, posRight));
+            return new BoundingBox(GeoPoint.immutable(top, negLeft), GeoPoint.immutable(bottom, posRight));
         }
     }
 

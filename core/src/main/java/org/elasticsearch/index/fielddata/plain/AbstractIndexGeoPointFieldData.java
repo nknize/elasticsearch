@@ -37,12 +37,12 @@ abstract class AbstractIndexGeoPointFieldData extends AbstractIndexFieldData<Ato
     protected static class GeoPointEnum {
 
         private final BytesRefIterator termsEnum;
-        private final GeoPoint next;
+        private final GeoPoint.Mutable next;
         private final CharsRefBuilder spare;
 
         protected GeoPointEnum(BytesRefIterator termsEnum) {
             this.termsEnum = termsEnum;
-            next = new GeoPoint();
+            next = GeoPoint.mutable();
             spare = new CharsRefBuilder();
         }
 

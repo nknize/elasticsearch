@@ -238,11 +238,11 @@ public class GeoUtils {
      * because when normalizing latitude it may be necessary to
      * add a shift of 180&deg; in the longitude.
      * For this purpose, you should call the
-     * {@link #normalizePoint(GeoPoint)} function.
+     * {@link #normalizePoint(GeoPoint.Mutable)} function.
      *
      * @param lat Latitude to normalize
      * @return The normalized latitude.
-     * @see #normalizePoint(GeoPoint)
+     * @see #normalizePoint(GeoPoint.Mutable)
      */
     public static double normalizeLat(double lat) {
         lat = centeredModulus(lat, 360);
@@ -263,7 +263,7 @@ public class GeoUtils {
      *
      * @param point The point to normalize in-place.
      */
-    public static void normalizePoint(GeoPoint point) {
+    public static void normalizePoint(GeoPoint.Mutable point) {
         normalizePoint(point, true, true);
     }
 
@@ -284,7 +284,7 @@ public class GeoUtils {
      * @param normLat Whether to normalize latitude or leave it as is.
      * @param normLon Whether to normalize longitude.
      */
-    public static void normalizePoint(GeoPoint point, boolean normLat, boolean normLon) {
+    public static void normalizePoint(GeoPoint.Mutable point, boolean normLat, boolean normLon) {
         double[] pt = {point.lon(), point.lat()};
         normalizePoint(pt, normLon, normLat);
         point.reset(pt[1], pt[0]);
@@ -343,8 +343,8 @@ public class GeoUtils {
      * @param parser {@link XContentParser} to parse the value from
      * @return new {@link GeoPoint} parsed from the parse
      */
-    public static GeoPoint parseGeoPoint(XContentParser parser) throws IOException, ElasticsearchParseException {
-        return parseGeoPoint(parser, new GeoPoint());
+    public static GeoPoint.Mutable parseGeoPoint(XContentParser parser) throws IOException, ElasticsearchParseException {
+        return parseGeoPoint(parser, GeoPoint.mutable());
     }
 
     /**
@@ -361,7 +361,7 @@ public class GeoUtils {
      * @param point A {@link GeoPoint} that will be reset by the values parsed
      * @return new {@link GeoPoint} parsed from the parse
      */
-    public static GeoPoint parseGeoPoint(XContentParser parser, GeoPoint point) throws IOException, ElasticsearchParseException {
+    public static GeoPoint.Mutable parseGeoPoint(XContentParser parser, GeoPoint.Mutable point) throws IOException, ElasticsearchParseException {
         double lat = Double.NaN;
         double lon = Double.NaN;
         String geohash = null;
@@ -444,7 +444,7 @@ public class GeoUtils {
     }
 
     /** parse a {@link GeoPoint} from a String */
-    public static GeoPoint parseGeoPoint(String data, GeoPoint point) {
+    public static GeoPoint.Mutable parseGeoPoint(String data, GeoPoint.Mutable point) {
         int comma = data.indexOf(',');
         if(comma > 0) {
             double lat = Double.parseDouble(data.substring(0, comma).trim());

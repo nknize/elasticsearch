@@ -80,8 +80,8 @@ public class GeoPointDoubleArrayIndexFieldData extends AbstractIndexGeoPointFiel
             while ((point = iter.next()) != null) {
                 lat = BigArrays.NON_RECYCLING_INSTANCE.resize(lat, numTerms + 1);
                 lon = BigArrays.NON_RECYCLING_INSTANCE.resize(lon, numTerms + 1);
-                lat.set(numTerms, point.getLat());
-                lon.set(numTerms, point.getLon());
+                lat.set(numTerms, point.lat());
+                lon.set(numTerms, point.lon());
                 ++numTerms;
             }
             lat = BigArrays.NON_RECYCLING_INSTANCE.resize(lat, numTerms);

@@ -64,7 +64,7 @@ final class GeoPointBinaryDVAtomicFieldData extends AbstractAtomicGeoPointFieldD
         return new MultiGeoPointValues() {
 
             int count;
-            GeoPoint[] points = new GeoPoint[0];
+            GeoPoint.Mutable[] points = new GeoPoint.Mutable[0];
 
             @Override
             public void setDocument(int docId) {
@@ -75,7 +75,7 @@ final class GeoPointBinaryDVAtomicFieldData extends AbstractAtomicGeoPointFieldD
                     final int previousLength = points.length;
                     points = Arrays.copyOf(points, ArrayUtil.oversize(count, RamUsageEstimator.NUM_BYTES_OBJECT_REF));
                     for (int i = previousLength; i < points.length; ++i) {
-                        points[i] = new GeoPoint();
+                        points[i] = GeoPoint.mutable();
                     }
                 }
                 for (int i = 0; i < count; ++i) {

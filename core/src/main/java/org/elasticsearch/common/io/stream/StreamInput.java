@@ -447,8 +447,8 @@ public abstract class StreamInput extends InputStream {
     /**
      * Reads a {@link GeoPoint} from this stream input
      */
-    public GeoPoint readGeoPoint() throws IOException {
-        return new GeoPoint(readDouble(), readDouble());
+    public GeoPoint.Immutable readGeoPoint() throws IOException {
+        return GeoPoint.immutable(readDouble(), readDouble());
     }
 
     public int[] readIntArray() throws IOException {

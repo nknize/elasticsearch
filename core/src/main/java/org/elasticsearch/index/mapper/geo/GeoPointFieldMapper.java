@@ -532,14 +532,14 @@ public class GeoPointFieldMapper extends FieldMapper implements ArrayValueMapper
         }
 
         /** Decode a geo point from a byte-array, reading {@link #numBytes()} bytes. */
-        public GeoPoint decode(byte[] in, int offset, GeoPoint out) {
+        public GeoPoint decode(byte[] in, int offset, GeoPoint.Mutable out) {
             final long latBits = decodeBits(in, offset);
             final long lonBits = decodeBits(in, offset + numBytesPerCoordinate);
             return decode(latBits, lonBits, out);
         }
 
         /** Decode a geo point from the bits of the encoded latitude and longitudes. */
-        public GeoPoint decode(long latBits, long lonBits, GeoPoint out) {
+        public GeoPoint decode(long latBits, long lonBits, GeoPoint.Mutable out) {
             final double lat = decodeCoordinate(latBits);
             final double lon = decodeCoordinate(lonBits);
             return out.reset(lat, lon);
@@ -769,26 +769,26 @@ public class GeoPointFieldMapper extends FieldMapper implements ArrayValueMapper
 
     public static class CustomGeoPointDocValuesField extends CustomNumericDocValuesField {
 
-        private final ObjectHashSet<GeoPoint> points;
+        private final ObjectHashSet<GeoPoint.Immutable> points;
 
         public CustomGeoPointDocValuesField(String name, double lat, double lon) {
             super(name);
             points = new ObjectHashSet<>(2);
-            points.add(new GeoPoint(lat, lon));
+            points.add(GeoPoint.immutable(lat, lon));
         }
 
         public void add(double lat, double lon) {
-            points.add(new GeoPoint(lat, lon));
+            points.add(GeoPoint.immutable(lat, lon));
         }
 
         @Override
         public BytesRef binaryValue() {
             final byte[] bytes = new byte[points.size() * 16];
             int off = 0;
-            for (Iterator<ObjectCursor<GeoPoint>> it = points.iterator(); it.hasNext(); ) {
+            for (Iterator<ObjectCursor<GeoPoint.Immutable>> it = points.iterator(); it.hasNext(); ) {
                 final GeoPoint point = it.next().value;
-                ByteUtils.writeDoubleLE(point.getLat(), bytes, off);
-                ByteUtils.writeDoubleLE(point.getLon(), bytes, off + 8);
+                ByteUtils.writeDoubleLE(point.lat(), bytes, off);
+                ByteUtils.writeDoubleLE(point.lon(), bytes, off + 8);
                 off += 16;
             }
             return new BytesRef(bytes);

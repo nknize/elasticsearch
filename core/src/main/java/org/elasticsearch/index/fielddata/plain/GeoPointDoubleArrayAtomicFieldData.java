@@ -77,7 +77,7 @@ public abstract class GeoPointDoubleArrayAtomicFieldData extends AbstractAtomicG
             final RandomAccessOrds ords = ordinals.ordinals();
             final SortedDocValues singleOrds = DocValues.unwrapSingleton(ords);
             if (singleOrds != null) {
-                final GeoPoint point = new GeoPoint();
+                final GeoPoint.Mutable point = GeoPoint.mutable();
                 final GeoPointValues values = new GeoPointValues() {
                     @Override
                     public GeoPoint get(int docID) {
@@ -90,7 +90,7 @@ public abstract class GeoPointDoubleArrayAtomicFieldData extends AbstractAtomicG
                 };
                 return FieldData.singleton(values, DocValues.docsWithValue(singleOrds, maxDoc));
             } else {
-                final GeoPoint point = new GeoPoint();
+                final GeoPoint.Mutable point = GeoPoint.mutable();
                 return new MultiGeoPointValues() {
 
                     @Override
@@ -146,12 +146,11 @@ public abstract class GeoPointDoubleArrayAtomicFieldData extends AbstractAtomicG
 
         @Override
         public MultiGeoPointValues getGeoPointValues() {
-            final GeoPoint point = new GeoPoint();
+            final GeoPoint.Mutable point = GeoPoint.mutable();
             final GeoPointValues values = new GeoPointValues() {
                 @Override
                 public GeoPoint get(int docID) {
-                    point.reset(lat.get(docID), lon.get(docID));
-                    return point;
+                    return point.reset(lat.get(docID), lon.get(docID));
                 }
             };
             return FieldData.singleton(values, set);

@@ -234,7 +234,7 @@ public abstract class DecayFunctionBuilder<DFB extends DecayFunctionBuilder> ext
                                                            GeoPointFieldMapper.GeoPointFieldType fieldType, MultiValueMode mode) throws IOException {
         XContentParser.Token token;
         String parameterName = null;
-        GeoPoint origin = new GeoPoint();
+        GeoPoint.Mutable origin = null; // = new GeoPoint();
         String scaleString = null;
         String offsetString = "0km";
         double decay = 0.5;

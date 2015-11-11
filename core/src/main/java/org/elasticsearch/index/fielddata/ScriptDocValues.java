@@ -244,7 +244,7 @@ public interface ScriptDocValues<T> extends List<T> {
         @Override
         public GeoPoint get(int index) {
             final GeoPoint point = values.valueAt(index);
-            return new GeoPoint(point.lat(), point.lon());
+            return GeoPoint.immutable(point.lat(), point.lon());
         }
 
         @Override
@@ -355,19 +355,19 @@ public interface ScriptDocValues<T> extends List<T> {
 
         public double geohashDistance(String geohash) {
             GeoPoint point = getValue();
-            GeoPoint p = new GeoPoint().resetFromGeoHash(geohash);
+            GeoPoint p = GeoPoint.mutable().resetFromGeoHash(geohash);
             return GeoDistance.ARC.calculate(point.lat(), point.lon(), p.lat(), p.lon(), DistanceUnit.DEFAULT);
         }
 
         public double geohashDistanceInKm(String geohash) {
             GeoPoint point = getValue();
-            GeoPoint p = new GeoPoint().resetFromGeoHash(geohash);
+            GeoPoint p = GeoPoint.mutable().resetFromGeoHash(geohash);
             return GeoDistance.ARC.calculate(point.lat(), point.lon(), p.lat(), p.lon(), DistanceUnit.KILOMETERS);
         }
 
         public double geohashDistanceInMiles(String geohash) {
             GeoPoint point = getValue();
-            GeoPoint p = new GeoPoint().resetFromGeoHash(geohash);
+            GeoPoint p = GeoPoint.mutable().resetFromGeoHash(geohash);
             return GeoDistance.ARC.calculate(point.lat(), point.lon(), p.lat(), p.lon(), DistanceUnit.MILES);
         }
 

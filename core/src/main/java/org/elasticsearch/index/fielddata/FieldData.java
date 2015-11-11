@@ -63,7 +63,7 @@ public enum FieldData {
     }
 
     public static GeoPointValues emptyGeoPoint() {
-        final GeoPoint point = new GeoPoint();
+        final GeoPoint point = GeoPoint.mutable();
         return new GeoPointValues() {
             @Override
             public GeoPoint get(int docID) {

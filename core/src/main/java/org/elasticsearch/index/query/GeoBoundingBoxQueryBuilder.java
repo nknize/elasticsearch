@@ -54,9 +54,9 @@ public class GeoBoundingBoxQueryBuilder extends AbstractQueryBuilder<GeoBounding
     /** Name of field holding geo coordinates to compute the bounding box on.*/
     private final String fieldName;
     /** Top left corner coordinates of bounding box. */
-    private final GeoPoint topLeft; // = new GeoPoint(Double.NaN, Double.NaN);
+    private GeoPoint.Immutable topLeft; // = new GeoPoint(Double.NaN, Double.NaN);
     /** Bottom right corner coordinates of bounding box.*/
-    private final GeoPoint bottomRight; // = new GeoPoint(Double.NaN, Double.NaN);
+    private GeoPoint.Immutable bottomRight; // = new GeoPoint(Double.NaN, Double.NaN);
     /** How to deal with incorrect coordinates.*/
     private GeoValidationMethod validationMethod = GeoValidationMethod.DEFAULT;
     /** How the query should be run. */
@@ -104,8 +104,8 @@ public class GeoBoundingBoxQueryBuilder extends AbstractQueryBuilder<GeoBounding
                 // we do not check longitudes as the query generation code can deal with flipped left/right values
         }
         
-        topLeft.reset(top, left);
-        bottomRight.reset(bottom, right);
+        topLeft = GeoPoint.immutable(top, left);
+        bottomRight = GeoPoint.immutable(bottom, right);
         return this;
     }
 
@@ -114,8 +114,8 @@ public class GeoBoundingBoxQueryBuilder extends AbstractQueryBuilder<GeoBounding
      * @param topLeft topLeft point to add.
      * @param bottomRight bottomRight point to add.
      * */
-    public GeoBoundingBoxQueryBuilder setCorners(GeoPoint topLeft, GeoPoint bottomRight) {
-        return setCorners(topLeft.getLat(), topLeft.getLon(), bottomRight.getLat(), bottomRight.getLon());
+    public GeoBoundingBoxQueryBuilder setCorners(final GeoPoint topLeft, final GeoPoint bottomRight) {
+        return setCorners(topLeft.lat(), topLeft.lon(), bottomRight.lat(), bottomRight.lon());
     }
 
     /**
@@ -124,7 +124,7 @@ public class GeoBoundingBoxQueryBuilder extends AbstractQueryBuilder<GeoBounding
      * @param bottomRight bottomRight point to add as geohash.
      * */
     public GeoBoundingBoxQueryBuilder setCorners(String topLeft, String bottomRight) {
-        return setCorners(GeoPoint.fromGeohash(topLeft), GeoPoint.fromGeohash(bottomRight));
+        return setCorners(GeoPoint.mutable().resetFromGeoHash(topLeft), GeoPoint.mutable().resetFromGeoHash(bottomRight));
     }
 
     /** Returns the top left corner of the bounding box. */
@@ -143,8 +143,8 @@ public class GeoBoundingBoxQueryBuilder extends AbstractQueryBuilder<GeoBounding
      * @param bottomLeft bottom left corner of bounding box.
      * @param topRight top right corner of bounding box.
      */
-    public GeoBoundingBoxQueryBuilder setCornersOGC(GeoPoint bottomLeft, GeoPoint topRight) {
-        return setCorners(topRight.getLat(), bottomLeft.getLon(), bottomLeft.getLat(), topRight.getLon());
+    public GeoBoundingBoxQueryBuilder setCornersOGC(final GeoPoint bottomLeft, final GeoPoint topRight) {
+        return setCorners(topRight.lat(), bottomLeft.lon(), bottomLeft.lat(), topRight.lon());
     }
 
     /**
@@ -154,7 +154,7 @@ public class GeoBoundingBoxQueryBuilder extends AbstractQueryBuilder<GeoBounding
      * @param topRight top right corner geohash.
      */
     public GeoBoundingBoxQueryBuilder setCornersOGC(String bottomLeft, String topRight) {
-        return setCornersOGC(GeoPoint.fromGeohash(bottomLeft), GeoPoint.fromGeohash(topRight));
+        return setCornersOGC(GeoPoint.mutable().resetFromGeoHash(bottomLeft), GeoPoint.mutable().resetFromGeoHash(topRight));
     }
 
     /**
@@ -211,20 +211,20 @@ public class GeoBoundingBoxQueryBuilder extends AbstractQueryBuilder<GeoBounding
 
         QueryValidationException validationException = null;
         // For everything post 2.0 validate latitude and longitude unless validation was explicitly turned off
-        if (GeoUtils.isValidLatitude(topLeft.getLat()) == false) {
-            validationException = addValidationError("top latitude is invalid: " + topLeft.getLat(),
+        if (GeoUtils.isValidLatitude(topLeft.lat()) == false) {
+            validationException = addValidationError("top latitude is invalid: " + topLeft.lat(),
                     validationException);
         }
-        if (GeoUtils.isValidLongitude(topLeft.getLon()) == false) {
-            validationException = addValidationError("left longitude is invalid: " + topLeft.getLon(),
+        if (GeoUtils.isValidLongitude(topLeft.lon()) == false) {
+            validationException = addValidationError("left longitude is invalid: " + topLeft.lon(),
                     validationException);
         }
-        if (GeoUtils.isValidLatitude(bottomRight.getLat()) == false) {
-            validationException = addValidationError("bottom latitude is invalid: " + bottomRight.getLat(),
+        if (GeoUtils.isValidLatitude(bottomRight.lat()) == false) {
+            validationException = addValidationError("bottom latitude is invalid: " + bottomRight.lat(),
                     validationException);
         }
-        if (GeoUtils.isValidLongitude(bottomRight.getLon()) == false) {
-            validationException = addValidationError("right longitude is invalid: " + bottomRight.getLon(),
+        if (GeoUtils.isValidLongitude(bottomRight.lon()) == false) {
+            validationException = addValidationError("right longitude is invalid: " + bottomRight.lon(),
                     validationException);
         }
         return validationException;
@@ -237,13 +237,13 @@ public class GeoBoundingBoxQueryBuilder extends AbstractQueryBuilder<GeoBounding
             throw new QueryShardException(context, "couldn't validate latitude/ longitude values", exception);
         }
 
-        GeoPoint luceneTopLeft = new GeoPoint(topLeft);
-        GeoPoint luceneBottomRight = new GeoPoint(bottomRight);
+        GeoPoint.Mutable luceneTopLeft = GeoPoint.mutable(topLeft);
+        GeoPoint.Mutable luceneBottomRight = GeoPoint.mutable(bottomRight);
         if (GeoValidationMethod.isCoerce(validationMethod)) {
             // Special case: if the difference between the left and right is 360 and the right is greater than the left, we are asking for
             // the complete longitude range so need to set longitude to the complete longditude range
-            double right = luceneBottomRight.getLon();
-            double left = luceneTopLeft.getLon();
+            double right = luceneBottomRight.lon();
+            double left = luceneTopLeft.lon();
 
             boolean completeLonRange = ((right - left) % 360 == 0 && right > left);
             GeoUtils.normalizePoint(luceneTopLeft, true, !completeLonRange);
@@ -285,8 +285,8 @@ public class GeoBoundingBoxQueryBuilder extends AbstractQueryBuilder<GeoBounding
         builder.startObject(NAME);
 
         builder.startObject(fieldName);
-        builder.array(GeoBoundingBoxQueryParser.TOP_LEFT, topLeft.getLon(), topLeft.getLat());
-        builder.array(GeoBoundingBoxQueryParser.BOTTOM_RIGHT, bottomRight.getLon(), bottomRight.getLat());
+        builder.array(GeoBoundingBoxQueryParser.TOP_LEFT, topLeft.lon(), topLeft.lat());
+        builder.array(GeoBoundingBoxQueryParser.BOTTOM_RIGHT, bottomRight.lon(), bottomRight.lat());
         builder.endObject();
         builder.field("validation_method", validationMethod);
         builder.field("type", type);

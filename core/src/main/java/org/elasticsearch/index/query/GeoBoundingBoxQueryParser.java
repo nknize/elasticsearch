@@ -84,7 +84,7 @@ public class GeoBoundingBoxQueryParser implements QueryParser<GeoBoundingBoxQuer
         boolean ignoreMalformed = GeoValidationMethod.DEFAULT_LENIENT_PARSING;
         GeoValidationMethod validationMethod = null;
 
-        GeoPoint sparse = new GeoPoint();
+        GeoPoint.Mutable sparse = GeoPoint.mutable();
 
         String type = "memory";
 
@@ -113,20 +113,20 @@ public class GeoBoundingBoxQueryParser implements QueryParser<GeoBoundingBoxQuer
                         } else {
                             if (TOP_LEFT.equals(currentFieldName) || TOPLEFT.equals(currentFieldName)) {
                                 GeoUtils.parseGeoPoint(parser, sparse);
-                                top = sparse.getLat();
-                                left = sparse.getLon();
+                                top = sparse.lat();
+                                left = sparse.lon();
                             } else if (BOTTOM_RIGHT.equals(currentFieldName) || BOTTOMRIGHT.equals(currentFieldName)) {
                                 GeoUtils.parseGeoPoint(parser, sparse);
-                                bottom = sparse.getLat();
-                                right = sparse.getLon();
+                                bottom = sparse.lat();
+                                right = sparse.lon();
                             } else if (TOP_RIGHT.equals(currentFieldName) || TOPRIGHT.equals(currentFieldName)) {
                                 GeoUtils.parseGeoPoint(parser, sparse);
-                                top = sparse.getLat();
-                                right = sparse.getLon();
+                                top = sparse.lat();
+                                right = sparse.lon();
                             } else if (BOTTOM_LEFT.equals(currentFieldName) || BOTTOMLEFT.equals(currentFieldName)) {
                                 GeoUtils.parseGeoPoint(parser, sparse);
-                                bottom = sparse.getLat();
-                                left = sparse.getLon();
+                                bottom = sparse.lat();
+                                left = sparse.lon();
                             } else {
                                 throw new ElasticsearchParseException("failed to parse [{}] query. unexpected field [{}]", NAME, currentFieldName);
                             }
@@ -158,7 +158,7 @@ public class GeoBoundingBoxQueryParser implements QueryParser<GeoBoundingBoxQuer
         }
 
         final GeoPoint topLeft = sparse.reset(top, left);  //just keep the object
-        final GeoPoint bottomRight = new GeoPoint(bottom, right);
+        final GeoPoint bottomRight = GeoPoint.immutable(bottom, right);
         GeoBoundingBoxQueryBuilder builder = new GeoBoundingBoxQueryBuilder(fieldName);
         builder.setCorners(topLeft, bottomRight);
         builder.queryName(queryName);

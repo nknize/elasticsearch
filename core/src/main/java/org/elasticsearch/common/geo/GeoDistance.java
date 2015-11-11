@@ -192,8 +192,8 @@ public enum GeoDistance implements Writeable<GeoDistance> {
             maxLon = MAX_LON;
         }
 
-        GeoPoint topLeft = new GeoPoint(Math.toDegrees(maxLat), Math.toDegrees(minLon));
-        GeoPoint bottomRight = new GeoPoint(Math.toDegrees(minLat), Math.toDegrees(maxLon));
+        GeoPoint topLeft = GeoPoint.immutable(Math.toDegrees(maxLat), Math.toDegrees(minLon));
+        GeoPoint bottomRight = GeoPoint.immutable(Math.toDegrees(minLat), Math.toDegrees(maxLon));
         if (minLon > maxLon) {
             return new Meridian180DistanceBoundingCheck(topLeft, bottomRight);
         }

@@ -61,7 +61,7 @@ public class GeoDistanceQueryBuilder extends AbstractQueryBuilder<GeoDistanceQue
     /** Distance from center to cover. */
     private double distance;
     /** Point to use as center. */
-    private GeoPoint center = new GeoPoint(Double.NaN, Double.NaN);
+    private GeoPoint.Immutable center;
     /** Algorithm to use for distance computation. */
     private GeoDistance geoDistance = DEFAULT_GEO_DISTANCE;
     /** Whether or not to use a bbox for pre-filtering. TODO change to enum? */
@@ -90,7 +90,7 @@ public class GeoDistanceQueryBuilder extends AbstractQueryBuilder<GeoDistanceQue
     /** Sets the center point for the query.
      * @param point the center of the query
      **/
-    public GeoDistanceQueryBuilder point(GeoPoint point) {
+    public GeoDistanceQueryBuilder point(GeoPoint.Immutable point) {
         if (point == null) {
             throw new IllegalArgumentException("center point must not be null");
         }
@@ -104,7 +104,7 @@ public class GeoDistanceQueryBuilder extends AbstractQueryBuilder<GeoDistanceQue
      * @param lon longitude of center
      * */
     public GeoDistanceQueryBuilder point(double lat, double lon) {
-        this.center = new GeoPoint(lat, lon);
+        this.center = GeoPoint.immutable(lat, lon);
         return this;
     }
 
@@ -145,7 +145,8 @@ public class GeoDistanceQueryBuilder extends AbstractQueryBuilder<GeoDistanceQue
         if (Strings.isEmpty(geohash)) {
             throw new IllegalArgumentException("geohash must not be null or empty");
         }
-        this.center.resetFromGeoHash(geohash);
+        final GeoPoint.Mutable transientPoint = GeoPoint.mutable().resetFromGeoHash(geohash);
+        this.center = GeoPoint.immutable(transientPoint.lat(), transientPoint.lon());
         return this;
     }
 
@@ -207,9 +208,9 @@ public class GeoDistanceQueryBuilder extends AbstractQueryBuilder<GeoDistanceQue
         if (exception != null) {
             throw new QueryShardException(shardContext, "couldn't validate latitude/ longitude values", exception);
         }
-
+        final GeoPoint.Mutable transientCenter = GeoPoint.mutable(center);
         if (GeoValidationMethod.isCoerce(validationMethod)) {
-            GeoUtils.normalizePoint(center, true, true);
+            GeoUtils.normalizePoint(transientCenter, true, true);
         }
 
         double normDistance = geoDistance.normalize(this.distance, DistanceUnit.DEFAULT);
@@ -224,7 +225,7 @@ public class GeoDistanceQueryBuilder extends AbstractQueryBuilder<GeoDistanceQue
         GeoPointFieldMapper.GeoPointFieldType geoFieldType = ((GeoPointFieldMapper.GeoPointFieldType) fieldType);
 
         IndexGeoPointFieldData indexFieldData = shardContext.getForField(fieldType);
-        Query query = new GeoDistanceRangeQuery(center, null, normDistance, true, false, geoDistance, geoFieldType, indexFieldData, optimizeBbox);
+        Query query = new GeoDistanceRangeQuery(transientCenter, null, normDistance, true, false, geoDistance, geoFieldType, indexFieldData, optimizeBbox);
         return query;
     }
 
@@ -285,11 +286,11 @@ public class GeoDistanceQueryBuilder extends AbstractQueryBuilder<GeoDistanceQue
 
         QueryValidationException validationException = null;
         // For everything post 2.0, validate latitude and longitude unless validation was explicitly turned off
-        if (GeoUtils.isValidLatitude(center.getLat()) == false) {
-            validationException = addValidationError("center point latitude is invalid: " + center.getLat(), validationException);
+        if (GeoUtils.isValidLatitude(center.lat()) == false) {
+            validationException = addValidationError("center point latitude is invalid: " + center.lat(), validationException);
         }
-        if (GeoUtils.isValidLongitude(center.getLon()) == false) {
-            validationException = addValidationError("center point longitude is invalid: " + center.getLon(), validationException);
+        if (GeoUtils.isValidLongitude(center.lon()) == false) {
+            validationException = addValidationError("center point longitude is invalid: " + center.lon(), validationException);
         }
         return validationException;
     }
