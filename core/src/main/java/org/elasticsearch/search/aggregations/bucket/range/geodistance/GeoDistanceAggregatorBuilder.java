@@ -19,7 +19,6 @@
 
 package org.elasticsearch.search.aggregations.bucket.range.geodistance;
 
-import org.elasticsearch.common.geo.GeoDistance;
 import org.elasticsearch.common.geo.GeoPoint;
 import org.elasticsearch.common.io.stream.StreamInput;
 import org.elasticsearch.common.io.stream.StreamOutput;
@@ -50,7 +49,6 @@ public class GeoDistanceAggregatorBuilder extends ValuesSourceAggregatorBuilder<
     private final GeoPoint origin;
     private List<Range> ranges = new ArrayList<>();
     private DistanceUnit unit = DistanceUnit.DEFAULT;
-    private GeoDistance distanceType = GeoDistance.DEFAULT;
     private boolean keyed = false;
 
     public GeoDistanceAggregatorBuilder(String name, GeoPoint origin) {
@@ -161,18 +159,6 @@ public class GeoDistanceAggregatorBuilder extends ValuesSourceAggregatorBuilder<
         return unit;
     }
 
-    public GeoDistanceAggregatorBuilder distanceType(GeoDistance distanceType) {
-        if (distanceType == null) {
-            throw new IllegalArgumentException("[distanceType] must not be null: [" + name + "]");
-        }
-        this.distanceType = distanceType;
-        return this;
-    }
-
-    public GeoDistance distanceType() {
-        return distanceType;
-    }
-
     public GeoDistanceAggregatorBuilder keyed(boolean keyed) {
         this.keyed = keyed;
         return this;
@@ -186,7 +172,7 @@ public class GeoDistanceAggregatorBuilder extends ValuesSourceAggregatorBuilder<
     protected ValuesSourceAggregatorFactory<ValuesSource.GeoPoint, ?> innerBuild(AggregationContext context,
             ValuesSourceConfig<ValuesSource.GeoPoint> config, AggregatorFactory<?> parent, Builder subFactoriesBuilder)
                     throws IOException {
-        return new GeoDistanceRangeAggregatorFactory(name, type, config, origin, ranges, unit, distanceType, keyed, context, parent,
+        return new GeoDistanceRangeAggregatorFactory(name, type, config, origin, ranges, unit, keyed, context, parent,
                 subFactoriesBuilder, metaData);
     }
 
@@ -196,7 +182,6 @@ public class GeoDistanceAggregatorBuilder extends ValuesSourceAggregatorBuilder<
         builder.field(RangeAggregator.RANGES_FIELD.getPreferredName(), ranges);
         builder.field(RangeAggregator.KEYED_FIELD.getPreferredName(), keyed);
         builder.field(GeoDistanceParser.UNIT_FIELD.getPreferredName(), unit);
-        builder.field(GeoDistanceParser.DISTANCE_TYPE_FIELD.getPreferredName(), distanceType);
         return builder;
     }
 
@@ -210,7 +195,6 @@ public class GeoDistanceAggregatorBuilder extends ValuesSourceAggregatorBuilder<
             factory.addRange(Range.PROTOTYPE.readFrom(in));
         }
         factory.keyed = in.readBoolean();
-        factory.distanceType = GeoDistance.readGeoDistanceFrom(in);
         factory.unit = DistanceUnit.readDistanceUnit(in);
         return factory;
     }
@@ -224,13 +208,12 @@ public class GeoDistanceAggregatorBuilder extends ValuesSourceAggregatorBuilder<
             range.writeTo(out);
         }
         out.writeBoolean(keyed);
-        distanceType.writeTo(out);
         DistanceUnit.writeDistanceUnit(out, unit);
     }
 
     @Override
     protected int innerHashCode() {
-        return Objects.hash(origin, ranges, keyed, distanceType, unit);
+        return Objects.hash(origin, ranges, keyed, unit);
     }
 
     @Override
@@ -239,7 +222,6 @@ public class GeoDistanceAggregatorBuilder extends ValuesSourceAggregatorBuilder<
         return Objects.equals(origin, other.origin)
                 && Objects.equals(ranges, other.ranges)
                 && Objects.equals(keyed, other.keyed)
-                && Objects.equals(distanceType, other.distanceType)
                 && Objects.equals(unit, other.unit);
     }
 

@@ -25,7 +25,6 @@ import org.apache.lucene.spatial.util.GeoDistanceUtils;
 import org.apache.lucene.util.NumericUtils;
 import org.elasticsearch.Version;
 import org.elasticsearch.common.compress.CompressedXContent;
-import org.elasticsearch.common.geo.GeoDistance;
 import org.elasticsearch.common.geo.GeoPoint;
 import org.elasticsearch.common.geo.GeoUtils;
 import org.elasticsearch.common.unit.DistanceUnit;
@@ -101,9 +100,6 @@ public class GeoDistanceRangeQueryTests extends AbstractQueryTestCase<GeoDistanc
         if (randomBoolean()) {
             builder.includeUpper(randomBoolean());
         }
-        if (randomBoolean()) {
-            builder.geoDistance(randomFrom(GeoDistance.values()));
-        }
         if (randomBoolean() && version.before(Version.V_2_2_0)) {
             builder.optimizeBbox(randomFrom("none", "memory", "indexed"));
         }
@@ -137,14 +133,10 @@ public class GeoDistanceRangeQueryTests extends AbstractQueryTestCase<GeoDistanc
             assertThat(geoQuery.lat(), equalTo(expectedPoint.lat()));
             assertThat(geoQuery.lon(), equalTo(expectedPoint.lon()));
         }
-        assertThat(geoQuery.geoDistance(), equalTo(queryBuilder.geoDistance()));
         if (queryBuilder.from() != null && queryBuilder.from() instanceof Number) {
             double fromValue = ((Number) queryBuilder.from()).doubleValue();
             if (queryBuilder.unit() != null) {
                 fromValue = queryBuilder.unit().toMeters(fromValue);
-            }
-            if (queryBuilder.geoDistance() != null) {
-                fromValue = queryBuilder.geoDistance().normalize(fromValue, DistanceUnit.DEFAULT);
             }
             double fromSlop = Math.abs(fromValue) / 1000;
             if (queryBuilder.includeLower() == false) {
@@ -156,9 +148,6 @@ public class GeoDistanceRangeQueryTests extends AbstractQueryTestCase<GeoDistanc
             double toValue = ((Number) queryBuilder.to()).doubleValue();
             if (queryBuilder.unit() != null) {
                 toValue = queryBuilder.unit().toMeters(toValue);
-            }
-            if (queryBuilder.geoDistance() != null) {
-                toValue = queryBuilder.geoDistance().normalize(toValue, DistanceUnit.DEFAULT);
             }
             double toSlop = Math.abs(toValue) / 1000;
             if (queryBuilder.includeUpper() == false) {
@@ -275,16 +264,6 @@ public class GeoDistanceRangeQueryTests extends AbstractQueryTestCase<GeoDistanc
             } catch (IllegalArgumentException e) {
                 assertThat(e.getMessage(), is("optimizeBbox must be one of [none, memory, indexed]"));
             }
-        }
-    }
-
-    public void testInvalidGeoDistance() {
-        GeoDistanceRangeQueryBuilder builder = new GeoDistanceRangeQueryBuilder(GEO_POINT_FIELD_NAME, new GeoPoint());
-        try {
-            builder.geoDistance(null);
-            fail("Expected IllegalArgumentException");
-        } catch (IllegalArgumentException e) {
-            assertThat(e.getMessage(), is("geoDistance calculation mode must not be null"));
         }
     }
 

@@ -29,10 +29,12 @@ import org.apache.lucene.search.Query;
 import org.apache.lucene.search.Scorer;
 import org.apache.lucene.search.TwoPhaseIterator;
 import org.apache.lucene.search.Weight;
+import org.apache.lucene.spatial.util.GeoDistanceUtils;
+import org.apache.lucene.spatial.util.GeoRect;
+import org.apache.lucene.spatial.util.GeoRelationUtils;
+import org.apache.lucene.spatial.util.GeoUtils;
 import org.apache.lucene.util.NumericUtils;
-import org.elasticsearch.common.geo.GeoDistance;
 import org.elasticsearch.common.geo.GeoPoint;
-import org.elasticsearch.common.unit.DistanceUnit;
 import org.elasticsearch.index.fielddata.IndexGeoPointFieldData;
 import org.elasticsearch.index.fielddata.MultiGeoPointValues;
 import org.elasticsearch.index.mapper.geo.GeoPointFieldMapperLegacy;
@@ -50,22 +52,17 @@ public class GeoDistanceRangeQuery extends Query {
     private final double inclusiveLowerPoint; // in meters
     private final double inclusiveUpperPoint; // in meters
 
-    private final GeoDistance geoDistance;
-    private final GeoDistance.FixedSourceDistance fixedSourceDistance;
-    private GeoDistance.DistanceBoundingCheck distanceBoundingCheck;
+    private GeoRect distanceBoundingCheck;
     private final Query boundingBoxFilter;
 
     private final IndexGeoPointFieldData indexFieldData;
 
     public GeoDistanceRangeQuery(GeoPoint point, Double lowerVal, Double upperVal, boolean includeLower,
-                                 boolean includeUpper, GeoDistance geoDistance, GeoPointFieldMapperLegacy.GeoPointFieldType fieldType,
+                                 boolean includeUpper, GeoPointFieldMapperLegacy.GeoPointFieldType fieldType,
                                  IndexGeoPointFieldData indexFieldData, String optimizeBbox) {
         this.lat = point.lat();
         this.lon = point.lon();
-        this.geoDistance = geoDistance;
         this.indexFieldData = indexFieldData;
-
-        this.fixedSourceDistance = geoDistance.fixedSourceDistance(lat, lon, DistanceUnit.DEFAULT);
 
         if (lowerVal != null) {
             double f = lowerVal.doubleValue();
@@ -87,17 +84,17 @@ public class GeoDistanceRangeQuery extends Query {
         }
 
         if (optimizeBbox != null && !"none".equals(optimizeBbox)) {
-            distanceBoundingCheck = GeoDistance.distanceBoundingCheck(lat, lon, inclusiveUpperPoint, DistanceUnit.DEFAULT);
+            distanceBoundingCheck = GeoUtils.circleToBBox(lon, lat, inclusiveUpperPoint);
             if ("memory".equals(optimizeBbox)) {
                 boundingBoxFilter = null;
             } else if ("indexed".equals(optimizeBbox)) {
-                boundingBoxFilter = IndexedGeoBoundingBoxQuery.create(distanceBoundingCheck.topLeft(), distanceBoundingCheck.bottomRight(), fieldType);
-                distanceBoundingCheck = GeoDistance.ALWAYS_INSTANCE; // fine, we do the bounding box check using the filter
+                boundingBoxFilter = IndexedGeoBoundingBoxQuery.create(new GeoPoint(distanceBoundingCheck.maxLat,
+                    distanceBoundingCheck.minLon), new GeoPoint(distanceBoundingCheck.minLat, distanceBoundingCheck.maxLon), fieldType);
             } else {
                 throw new IllegalArgumentException("type [" + optimizeBbox + "] for bounding box optimization not supported");
             }
         } else {
-            distanceBoundingCheck = GeoDistance.ALWAYS_INSTANCE;
+            distanceBoundingCheck = null;
             boundingBoxFilter = null;
         }
     }
@@ -108,10 +105,6 @@ public class GeoDistanceRangeQuery extends Query {
 
     public double lon() {
         return lon;
-    }
-
-    public GeoDistance geoDistance() {
-        return geoDistance;
     }
 
     public double minInclusiveDistance() {
@@ -162,8 +155,10 @@ public class GeoDistanceRangeQuery extends Query {
                         final int length = values.count();
                         for (int i = 0; i < length; i++) {
                             GeoPoint point = values.valueAt(i);
-                            if (distanceBoundingCheck.isWithin(point.lat(), point.lon())) {
-                                double d = fixedSourceDistance.calculate(point.lat(), point.lon());
+                            if (distanceBoundingCheck == null ||
+                                GeoRelationUtils.pointInRectPrecise(point.lon(), point.lat(), distanceBoundingCheck.minLon,
+                                distanceBoundingCheck.minLat, distanceBoundingCheck.maxLon, distanceBoundingCheck.maxLat)) {
+                                double d = GeoDistanceUtils.haversin(lat, lon, point.lat(), point.lon());
                                 if (d >= inclusiveLowerPoint && d <= inclusiveUpperPoint) {
                                     return true;
                                 }
@@ -174,8 +169,10 @@ public class GeoDistanceRangeQuery extends Query {
 
                     @Override
                     public float matchCost() {
-                        if (distanceBoundingCheck == GeoDistance.ALWAYS_INSTANCE) {
-                            return 0.0f;
+                        if (distanceBoundingCheck == null) {
+                            // TODO: this is just simply the number of operations for haversin. dumb but computing haversin
+                            // for every point is expensive so prefilter optimization should be faster
+                            return 19.0f;
                         } else {
                             // TODO: is this right (up to 4 comparisons from GeoDistance.SimpleDistanceBoundingCheck)?
                             return 4.0f;
@@ -200,14 +197,12 @@ public class GeoDistanceRangeQuery extends Query {
         if (Double.compare(filter.lon, lon) != 0) return false;
         if (!indexFieldData.getFieldName().equals(filter.indexFieldData.getFieldName()))
             return false;
-        if (geoDistance != filter.geoDistance) return false;
-
         return true;
     }
 
     @Override
     public String toString(String field) {
-        return "GeoDistanceRangeQuery(" + indexFieldData.getFieldName() + ", " + geoDistance + ", [" + inclusiveLowerPoint + " - " + inclusiveUpperPoint + "], " + lat + ", " + lon + ")";
+        return "GeoDistanceRangeQuery(" + indexFieldData.getFieldName() + ", [" + inclusiveLowerPoint + " - " + inclusiveUpperPoint + "], " + lat + ", " + lon + ")";
     }
 
     @Override
@@ -222,7 +217,6 @@ public class GeoDistanceRangeQuery extends Query {
         result = 31 * result + Long.hashCode(temp);
         temp = inclusiveUpperPoint != +0.0d ? Double.doubleToLongBits(inclusiveUpperPoint) : 0L;
         result = 31 * result + Long.hashCode(temp);
-        result = 31 * result + (geoDistance != null ? geoDistance.hashCode() : 0);
         result = 31 * result + indexFieldData.getFieldName().hashCode();
         return result;
     }

@@ -23,10 +23,10 @@ import com.carrotsearch.hppc.ObjectHashSet;
 import com.carrotsearch.hppc.cursors.ObjectCursor;
 import org.apache.lucene.document.Field;
 import org.apache.lucene.index.IndexOptions;
+import org.apache.lucene.spatial.util.GeoDistanceUtils;
 import org.apache.lucene.util.BytesRef;
 import org.elasticsearch.common.Explicit;
 import org.elasticsearch.common.Strings;
-import org.elasticsearch.common.geo.GeoDistance;
 import org.elasticsearch.common.geo.GeoPoint;
 import org.elasticsearch.common.geo.GeoUtils;
 import org.elasticsearch.common.settings.Settings;
@@ -196,7 +196,7 @@ public class GeoPointFieldMapperLegacy extends BaseGeoPointFieldMapper implement
                 precision = new DistanceUnit.Distance(0, DistanceUnit.DEFAULT);
             } else {
                 precision = new DistanceUnit.Distance(
-                        GeoDistance.PLANE.calculate(0, 0, factor / 2, factor / 2, DistanceUnit.DEFAULT), // factor/2 because we use Math.round instead of a cast to convert the double to a long
+                    GeoDistanceUtils.haversin(0, 0, factor / 2, factor / 2), // factor/2 because we use Math.round instead of a cast to convert the double to a long
                         DistanceUnit.DEFAULT);
             }
         }

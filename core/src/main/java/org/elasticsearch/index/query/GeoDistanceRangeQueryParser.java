@@ -21,7 +21,6 @@ package org.elasticsearch.index.query;
 
 import org.elasticsearch.common.ParseField;
 import org.elasticsearch.common.ParsingException;
-import org.elasticsearch.common.geo.GeoDistance;
 import org.elasticsearch.common.geo.GeoPoint;
 import org.elasticsearch.common.geo.GeoUtils;
 import org.elasticsearch.common.unit.DistanceUnit;
@@ -83,7 +82,6 @@ public class GeoDistanceRangeQueryParser implements QueryParser<GeoDistanceRange
         Boolean includeLower = null;
         Boolean includeUpper = null;
         DistanceUnit unit = null;
-        GeoDistance geoDistance = null;
         String optimizeBbox = null;
         boolean coerce = GeoValidationMethod.DEFAULT_LENIENT_PARSING;
         boolean ignoreMalformed = GeoValidationMethod.DEFAULT_LENIENT_PARSING;
@@ -170,8 +168,6 @@ public class GeoDistanceRangeQueryParser implements QueryParser<GeoDistanceRange
                     includeUpper = true;
                 } else if (parseContext.parseFieldMatcher().match(currentFieldName, UNIT_FIELD)) {
                     unit = DistanceUnit.fromString(parser.text());
-                } else if (parseContext.parseFieldMatcher().match(currentFieldName, DISTANCE_TYPE_FIELD)) {
-                    geoDistance = GeoDistance.fromString(parser.text());
                 } else if (currentFieldName.endsWith(GeoPointFieldMapper.Names.LAT_SUFFIX)) {
                     String maybeFieldName = currentFieldName.substring(0, currentFieldName.length() - GeoPointFieldMapper.Names.LAT_SUFFIX.length());
                     if (fieldName == null || fieldName.equals(maybeFieldName)) {
@@ -258,10 +254,6 @@ public class GeoDistanceRangeQueryParser implements QueryParser<GeoDistanceRange
 
         if (unit != null) {
             queryBuilder.unit(unit);
-        }
-
-        if (geoDistance != null) {
-            queryBuilder.geoDistance(geoDistance);
         }
 
         if (optimizeBbox != null) {

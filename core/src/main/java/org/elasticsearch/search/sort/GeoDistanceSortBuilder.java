@@ -20,7 +20,6 @@
 package org.elasticsearch.search.sort;
 
 import org.elasticsearch.ElasticsearchParseException;
-import org.elasticsearch.common.geo.GeoDistance;
 import org.elasticsearch.common.geo.GeoPoint;
 import org.elasticsearch.common.geo.GeoUtils;
 import org.elasticsearch.common.io.stream.StreamInput;
@@ -51,7 +50,6 @@ public class GeoDistanceSortBuilder extends SortBuilder<GeoDistanceSortBuilder> 
     private final String fieldName;
     private final List<GeoPoint> points = new ArrayList<>();
 
-    private GeoDistance geoDistance = GeoDistance.DEFAULT;
     private DistanceUnit unit = DistanceUnit.DEFAULT;
 
     private SortMode sortMode = null;
@@ -110,7 +108,6 @@ public class GeoDistanceSortBuilder extends SortBuilder<GeoDistanceSortBuilder> 
     GeoDistanceSortBuilder(GeoDistanceSortBuilder original) {
         this.fieldName = original.fieldName();
         this.points.addAll(original.points);
-        this.geoDistance = original.geoDistance;
         this.unit = original.unit;
         this.order = original.order;
         this.sortMode = original.sortMode;
@@ -166,21 +163,6 @@ public class GeoDistanceSortBuilder extends SortBuilder<GeoDistanceSortBuilder> 
             this.points.add(GeoPoint.fromGeohash(geohash));
         }
         return this;
-    }
-
-    /**
-     * The geo distance type used to compute the distance.
-     */
-    public GeoDistanceSortBuilder geoDistance(GeoDistance geoDistance) {
-        this.geoDistance = geoDistance;
-        return this;
-    }
-
-    /**
-     * Returns the geo distance type used to compute the distance.
-     */
-    public GeoDistance geoDistance() {
-        return this.geoDistance;
     }
 
     /**
@@ -281,7 +263,6 @@ public class GeoDistanceSortBuilder extends SortBuilder<GeoDistanceSortBuilder> 
         builder.endArray();
 
         builder.field("unit", unit);
-        builder.field("distance_type", geoDistance.name().toLowerCase(Locale.ROOT));
         builder.field(ORDER_FIELD.getPreferredName(), order);
 
         if (sortMode != null) {
@@ -319,7 +300,6 @@ public class GeoDistanceSortBuilder extends SortBuilder<GeoDistanceSortBuilder> 
         GeoDistanceSortBuilder other = (GeoDistanceSortBuilder) object;
         return Objects.equals(fieldName, other.fieldName) &&
                 Objects.deepEquals(points, other.points) &&
-                Objects.equals(geoDistance, other.geoDistance) &&
                 Objects.equals(unit, other.unit) &&
                 Objects.equals(sortMode, other.sortMode) &&
                 Objects.equals(order, other.order) &&
@@ -331,7 +311,7 @@ public class GeoDistanceSortBuilder extends SortBuilder<GeoDistanceSortBuilder> 
 
     @Override
     public int hashCode() {
-        return Objects.hash(this.fieldName, this.points, this.geoDistance,
+        return Objects.hash(this.fieldName, this.points,
                 this.unit, this.sortMode, this.order, this.nestedFilter, this.nestedPath, this.coerce, this.ignoreMalformed);
     }
 
@@ -386,7 +366,6 @@ public class GeoDistanceSortBuilder extends SortBuilder<GeoDistanceSortBuilder> 
         String fieldName = null;
         List<GeoPoint> geoPoints = new ArrayList<>();
         DistanceUnit unit = DistanceUnit.DEFAULT;
-        GeoDistance geoDistance = GeoDistance.DEFAULT;
         SortOrder order = SortOrder.ASC;
         SortMode sortMode = null;
         QueryBuilder<?> nestedFilter = null;

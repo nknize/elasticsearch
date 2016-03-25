@@ -24,7 +24,6 @@ import org.apache.lucene.spatial.geopoint.search.GeoPointDistanceQuery;
 import org.apache.lucene.search.Query;
 import org.apache.lucene.spatial.util.GeoEncodingUtils;
 import org.elasticsearch.Version;
-import org.elasticsearch.common.geo.GeoDistance;
 import org.elasticsearch.common.geo.GeoPoint;
 import org.elasticsearch.common.unit.DistanceUnit;
 import org.elasticsearch.index.search.geo.GeoDistanceRangeQuery;
@@ -70,9 +69,6 @@ public class GeoDistanceQueryBuilderTests extends AbstractQueryTestCase<GeoDista
             qb.optimizeBbox(randomFrom("none", "memory", "indexed"));
         }
 
-        if (randomBoolean()) {
-            qb.geoDistance(randomFrom(GeoDistance.values()));
-        }
         return qb;
     }
 
@@ -141,13 +137,6 @@ public class GeoDistanceQueryBuilderTests extends AbstractQueryTestCase<GeoDista
         }
 
         try {
-            query.geoDistance(null);
-            fail("geodistance must not be null");
-        } catch (IllegalArgumentException ex) {
-            assertThat(ex.getMessage(), equalTo("geoDistance must not be null"));
-        }
-
-        try {
             query.optimizeBbox(null);
             fail("optimizeBbox must not be null");
         } catch (IllegalArgumentException ex) {
@@ -184,12 +173,8 @@ public class GeoDistanceQueryBuilderTests extends AbstractQueryTestCase<GeoDista
             assertThat(geoQuery.lat(), equalTo(queryBuilder.point().lat()));
             assertThat(geoQuery.lon(), equalTo(queryBuilder.point().lon()));
         }
-        assertThat(geoQuery.geoDistance(), equalTo(queryBuilder.geoDistance()));
         assertThat(geoQuery.minInclusiveDistance(), equalTo(Double.NEGATIVE_INFINITY));
         double distance = queryBuilder.distance();
-        if (queryBuilder.geoDistance() != null) {
-            distance = queryBuilder.geoDistance().normalize(distance, DistanceUnit.DEFAULT);
-        }
         assertThat(geoQuery.maxInclusiveDistance(), closeTo(distance, Math.abs(distance) / 1000));
     }
 
@@ -200,12 +185,6 @@ public class GeoDistanceQueryBuilderTests extends AbstractQueryTestCase<GeoDista
         if (queryBuilder.point() != null) {
             assertThat(geoQuery.getCenterLat(), equalTo(queryBuilder.point().lat()));
             assertThat(geoQuery.getCenterLon(), equalTo(queryBuilder.point().lon()));
-        }
-        double distance = queryBuilder.distance();
-        if (queryBuilder.geoDistance() != null) {
-            distance = queryBuilder.geoDistance().normalize(distance, DistanceUnit.DEFAULT);
-            distance = org.elasticsearch.common.geo.GeoUtils.maxRadialDistance(queryBuilder.point(), distance);
-            assertThat(geoQuery.getRadiusMeters(), closeTo(distance, GeoEncodingUtils.TOLERANCE));
         }
     }
 

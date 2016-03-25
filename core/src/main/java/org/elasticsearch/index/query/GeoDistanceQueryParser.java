@@ -21,7 +21,6 @@ package org.elasticsearch.index.query;
 
 import org.elasticsearch.common.ParseField;
 import org.elasticsearch.common.ParsingException;
-import org.elasticsearch.common.geo.GeoDistance;
 import org.elasticsearch.common.geo.GeoPoint;
 import org.elasticsearch.common.geo.GeoUtils;
 import org.elasticsearch.common.unit.DistanceUnit;
@@ -46,7 +45,6 @@ public class GeoDistanceQueryParser implements QueryParser<GeoDistanceQueryBuild
     public static final ParseField IGNORE_MALFORMED_FIELD = new ParseField("ignore_malformed");
     public static final ParseField COERCE_FIELD = new ParseField("coerce", "normalize");
     public static final ParseField OPTIMIZE_BBOX_FIELD = new ParseField("optimize_bbox");
-    public static final ParseField DISTANCE_TYPE_FIELD = new ParseField("distance_type");
     public static final ParseField UNIT_FIELD = new ParseField("unit");
     public static final ParseField DISTANCE_FIELD = new ParseField("distance");
 
@@ -68,7 +66,6 @@ public class GeoDistanceQueryParser implements QueryParser<GeoDistanceQueryBuild
         String fieldName = null;
         Object vDistance = null;
         DistanceUnit unit = GeoDistanceQueryBuilder.DEFAULT_DISTANCE_UNIT;
-        GeoDistance geoDistance = GeoDistanceQueryBuilder.DEFAULT_GEO_DISTANCE;
         String optimizeBbox = GeoDistanceQueryBuilder.DEFAULT_OPTIMIZE_BBOX;
         boolean coerce = GeoValidationMethod.DEFAULT_LENIENT_PARSING;
         boolean ignoreMalformed = GeoValidationMethod.DEFAULT_LENIENT_PARSING;
@@ -112,8 +109,6 @@ public class GeoDistanceQueryParser implements QueryParser<GeoDistanceQueryBuild
                     }
                 } else if (parseContext.parseFieldMatcher().match(currentFieldName, UNIT_FIELD)) {
                     unit = DistanceUnit.fromString(parser.text());
-                } else if (parseContext.parseFieldMatcher().match(currentFieldName, DISTANCE_TYPE_FIELD)) {
-                    geoDistance = GeoDistance.fromString(parser.text());
                 } else if (currentFieldName.endsWith(GeoPointFieldMapper.Names.LAT_SUFFIX)) {
                     point.resetLat(parser.doubleValue());
                     fieldName = currentFieldName.substring(0, currentFieldName.length() - GeoPointFieldMapper.Names.LAT_SUFFIX.length());
@@ -164,7 +159,6 @@ public class GeoDistanceQueryParser implements QueryParser<GeoDistanceQueryBuild
             qb.setValidationMethod(GeoValidationMethod.infer(coerce, ignoreMalformed));
         }
         qb.optimizeBbox(optimizeBbox);
-        qb.geoDistance(geoDistance);
         qb.boost(boost);
         qb.queryName(queryName);
         return qb;

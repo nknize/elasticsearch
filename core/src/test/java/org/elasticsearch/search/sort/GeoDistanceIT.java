@@ -24,7 +24,6 @@ import org.elasticsearch.Version;
 import org.elasticsearch.action.index.IndexRequestBuilder;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.cluster.metadata.IndexMetaData;
-import org.elasticsearch.common.geo.GeoDistance;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.unit.DistanceUnit;
 import org.elasticsearch.common.xcontent.XContentBuilder;
@@ -125,8 +124,7 @@ public class GeoDistanceIT extends ESIntegTestCase {
 
         // now with a PLANE type
         searchResponse = client().prepareSearch() // from NY
-                .setQuery(geoDistanceQuery("location").distance("3km").geoDistance(GeoDistance.PLANE).point(40.7143528, -74.0059731))
-                .execute().actionGet();
+                .setQuery(geoDistanceQuery("location").distance("3km").point(40.7143528, -74.0059731)).execute().actionGet();
         assertHitCount(searchResponse, 5);
         assertThat(searchResponse.getHits().hits().length, equalTo(5));
         for (SearchHit hit : searchResponse.getHits()) {
@@ -561,7 +559,7 @@ public class GeoDistanceIT extends ESIntegTestCase {
         client().prepareGet("locations", "location", "1").execute().actionGet();
 
         SearchResponse result = client().prepareSearch("locations").setQuery(QueryBuilders.matchAllQuery())
-                .setPostFilter(QueryBuilders.geoDistanceQuery("pin").geoDistance(GeoDistance.ARC).point(lat, lon).distance("1m")).execute()
+                .setPostFilter(QueryBuilders.geoDistanceQuery("pin").point(lat, lon).distance("1m")).execute()
                 .actionGet();
 
         assertHitCount(result, 1);
@@ -596,25 +594,22 @@ public class GeoDistanceIT extends ESIntegTestCase {
             final double originLat = randomLat();
             final double originLon = randomLon();
             final String distance = DistanceUnit.KILOMETERS.toString(randomIntBetween(1, 10000));
-            for (GeoDistance geoDistance : Arrays.asList(GeoDistance.ARC, GeoDistance.SLOPPY_ARC)) {
-                logger.info("Now testing GeoDistance={}, distance={}, origin=({}, {})", geoDistance, distance, originLat, originLon);
-                GeoDistanceQueryBuilder qb = QueryBuilders.geoDistanceQuery("location").point(originLat, originLon).distance(distance)
-                        .geoDistance(geoDistance);
-                long matches;
-                if (version.before(Version.V_2_2_0)) {
-                    for (String optimizeBbox : Arrays.asList("none", "memory", "indexed")) {
-                        qb.optimizeBbox(optimizeBbox);
-                        SearchResponse resp = client().prepareSearch("index").setSize(0).setQuery(QueryBuilders.constantScoreQuery(qb))
-                                .execute().actionGet();
-                        matches = assertDuelOptimization(resp);
-                        logger.info("{} -> {} hits", optimizeBbox, matches);
-                    }
-                } else {
+            logger.info("Now testing GeoDistance={}, origin=({}, {})", distance, originLat, originLon);
+            GeoDistanceQueryBuilder qb = QueryBuilders.geoDistanceQuery("location").point(originLat, originLon).distance(distance);
+            long matches;
+            if (version.before(Version.V_2_2_0)) {
+                for (String optimizeBbox : Arrays.asList("none", "memory", "indexed")) {
+                    qb.optimizeBbox(optimizeBbox);
                     SearchResponse resp = client().prepareSearch("index").setSize(0).setQuery(QueryBuilders.constantScoreQuery(qb))
-                            .execute().actionGet();
+                        .execute().actionGet();
                     matches = assertDuelOptimization(resp);
-                    logger.info("{} hits", matches);
+                    logger.info("{} -> {} hits", optimizeBbox, matches);
                 }
+            } else {
+                SearchResponse resp = client().prepareSearch("index").setSize(0).setQuery(QueryBuilders.constantScoreQuery(qb))
+                    .execute().actionGet();
+                matches = assertDuelOptimization(resp);
+                logger.info("{} hits", matches);
             }
         }
     }

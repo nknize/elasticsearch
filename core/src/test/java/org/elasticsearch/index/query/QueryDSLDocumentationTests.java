@@ -20,7 +20,6 @@
 package org.elasticsearch.index.query;
 
 import org.apache.lucene.search.join.ScoreMode;
-import org.elasticsearch.common.geo.GeoDistance;
 import org.elasticsearch.common.geo.GeoPoint;
 import org.elasticsearch.common.geo.ShapeRelation;
 import org.elasticsearch.common.geo.builders.CoordinatesBuilder;
@@ -151,8 +150,7 @@ public class QueryDSLDocumentationTests extends ESTestCase {
         geoDistanceQuery("pin.location")
             .point(40, -70)
             .distance(200, DistanceUnit.KILOMETERS)
-            .optimizeBbox("memory")                     // TODO switch to geoexectype see also bounding box
-            .geoDistance(GeoDistance.ARC);
+            .optimizeBbox("memory");                     // TODO switch to geoexectype see also bounding box
     }
 
     public void testGeoDistanceRange() {
@@ -161,8 +159,7 @@ public class QueryDSLDocumentationTests extends ESTestCase {
             .to("400km")
             .includeLower(true)
             .includeUpper(false)
-            .optimizeBbox("memory")
-            .geoDistance(GeoDistance.ARC);
+            .optimizeBbox("memory");
     }
 
     public void testGeoPolygon() {

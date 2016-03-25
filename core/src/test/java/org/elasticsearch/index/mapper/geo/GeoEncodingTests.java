@@ -19,7 +19,7 @@
 
 package org.elasticsearch.index.mapper.geo;
 
-import org.elasticsearch.common.geo.GeoDistance;
+import org.apache.lucene.spatial.util.GeoDistanceUtils;
 import org.elasticsearch.common.geo.GeoPoint;
 import org.elasticsearch.common.unit.DistanceUnit;
 import org.elasticsearch.common.unit.DistanceUnit.Distance;
@@ -40,7 +40,7 @@ public class GeoEncodingTests extends ESTestCase {
             final GeoPointFieldMapperLegacy.Encoding encoding = GeoPointFieldMapperLegacy.Encoding.of(precision);
             assertThat(encoding.precision().convert(DistanceUnit.METERS).value, lessThanOrEqualTo(precision.convert(DistanceUnit.METERS).value));
             final GeoPoint geoPoint = encoding.decode(encoding.encodeCoordinate(lat), encoding.encodeCoordinate(lon), new GeoPoint());
-            final double error = GeoDistance.PLANE.calculate(lat, lon, geoPoint.lat(), geoPoint.lon(), DistanceUnit.METERS);
+            final double error = GeoDistanceUtils.vincentyDistance(lon, lat, geoPoint.lon(), geoPoint.lat());
             assertThat(error, lessThanOrEqualTo(precision.convert(DistanceUnit.METERS).value));
         }
     }

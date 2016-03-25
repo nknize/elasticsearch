@@ -18,6 +18,8 @@
  */
 package org.elasticsearch.index.fielddata;
 
+import org.apache.lucene.spatial.util.GeoDistanceUtils;
+import org.apache.lucene.util.Bits;
 import org.elasticsearch.common.geo.GeoPoint;
 
 /**
@@ -67,5 +69,45 @@ public abstract class MultiGeoPointValues {
      * @return the next value for the current docID set to {@link #setDocument(int)}.
      */
     public abstract GeoPoint valueAt(int i);
+
+    /**
+     * Return a {@link SortedNumericDoubleValues} instance that returns the distances to a list of geo-points for each document.
+     */
+    public static SortedNumericDoubleValues distanceValues(final MultiGeoPointValues geoPointValues, final GeoPoint... sourceLoc) {
+        final GeoPointValues singleValues = FieldData.unwrapSingleton(geoPointValues);
+        if (singleValues != null && sourceLoc.length == 1) {
+            final Bits docsWithField = FieldData.unwrapSingletonBits(geoPointValues);
+            return FieldData.singleton(new NumericDoubleValues() {
+
+                @Override
+                public double get(int docID) {
+                    if (docsWithField != null && !docsWithField.get(docID)) {
+                        return 0d;
+                    }
+                    final GeoPoint point = singleValues.get(docID);
+                    return GeoDistanceUtils.haversin(point.lat(), point.lon(), sourceLoc[0].lat(), sourceLoc[0].lon());
+                }
+
+            }, docsWithField);
+        } else {
+            return new SortingNumericDoubleValues() {
+
+                @Override
+                public void setDocument(int doc) {
+                    geoPointValues.setDocument(doc);
+                    resize(geoPointValues.count());
+                    int valueCounter = 0;
+                    for (GeoPoint source : sourceLoc) {
+                        for (int i = 0; i < geoPointValues.count(); ++i) {
+                            final GeoPoint point = geoPointValues.valueAt(i);
+                            values[valueCounter] = GeoDistanceUtils.haversin(point.lat(), point.lon(), source.lat(), source.lon());
+                            valueCounter++;
+                        }
+                    }
+                    sort();
+                }
+            };
+        }
+    }
 
 }

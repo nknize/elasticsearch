@@ -29,11 +29,11 @@ import org.apache.lucene.index.DirectoryReader;
 import org.apache.lucene.index.LeafReaderContext;
 import org.apache.lucene.index.RandomAccessOrds;
 import org.apache.lucene.index.SortedNumericDocValues;
+import org.apache.lucene.spatial.util.GeoDistanceUtils;
 import org.apache.lucene.util.BytesRef;
 import org.apache.lucene.util.BytesRefBuilder;
 import org.apache.lucene.util.English;
 import org.elasticsearch.common.compress.CompressedXContent;
-import org.elasticsearch.common.geo.GeoDistance;
 import org.elasticsearch.common.geo.GeoPoint;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.unit.DistanceUnit;
@@ -594,7 +594,7 @@ public class DuelFieldDataTests extends AbstractFieldDataTestCase {
 
     private static boolean contains(GeoPoint point, List<GeoPoint> set, Distance precision) {
         for (GeoPoint r : set) {
-            final double distance = GeoDistance.PLANE.calculate(point.getLat(), point.getLon(), r.getLat(), r.getLon(), DistanceUnit.METERS);
+            final double distance = GeoDistanceUtils.haversin(point.getLat(), point.getLon(), r.getLat(), r.getLon());
             if (new Distance(distance, DistanceUnit.METERS).compareTo(precision) <= 0) {
                 return true;
             }

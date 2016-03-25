@@ -29,8 +29,6 @@ import org.apache.lucene.search.join.BitSetProducer;
 import org.apache.lucene.util.BitSet;
 import org.elasticsearch.ElasticsearchParseException;
 import org.elasticsearch.Version;
-import org.elasticsearch.common.geo.GeoDistance;
-import org.elasticsearch.common.geo.GeoDistance.FixedSourceDistance;
 import org.elasticsearch.common.geo.GeoPoint;
 import org.elasticsearch.common.geo.GeoUtils;
 import org.elasticsearch.common.lucene.search.Queries;
@@ -66,7 +64,6 @@ public class GeoDistanceSortParser implements SortParser {
         String fieldName = null;
         List<GeoPoint> geoPoints = new ArrayList<>();
         DistanceUnit unit = DistanceUnit.DEFAULT;
-        GeoDistance geoDistance = GeoDistance.DEFAULT;
         boolean reverse = false;
         MultiValueMode sortMode = null;
         NestedInnerQueryParseSupport nestedHelper = null;
@@ -164,7 +161,7 @@ public class GeoDistanceSortParser implements SortParser {
         }
         final MultiValueMode finalSortMode = sortMode; // final reference for use in the anonymous class
         final IndexGeoPointFieldData geoIndexFieldData = context.getForField(fieldType);
-        final FixedSourceDistance[] distances = new FixedSourceDistance[geoPoints.size()];
+//        final FixedSourceDistance[] distances = new FixedSourceDistance[geoPoints.size()];
         for (int i = 0; i< geoPoints.size(); i++) {
             distances[i] = geoDistance.fixedSourceDistance(geoPoints.get(i).lat(), geoPoints.get(i).lon(), unit);
         }

@@ -24,7 +24,6 @@ import org.apache.lucene.spatial.geopoint.search.GeoPointDistanceQuery;
 import org.apache.lucene.search.Query;
 import org.elasticsearch.Version;
 import org.elasticsearch.common.Strings;
-import org.elasticsearch.common.geo.GeoDistance;
 import org.elasticsearch.common.geo.GeoPoint;
 import org.elasticsearch.common.geo.GeoUtils;
 import org.elasticsearch.common.io.stream.StreamInput;
@@ -55,8 +54,6 @@ public class GeoDistanceQueryBuilder extends AbstractQueryBuilder<GeoDistanceQue
     public static final boolean DEFAULT_NORMALIZE_LON = true;
     /** Default for distance unit computation. */
     public static final DistanceUnit DEFAULT_DISTANCE_UNIT = DistanceUnit.DEFAULT;
-    /** Default for geo distance computation. */
-    public static final GeoDistance DEFAULT_GEO_DISTANCE = GeoDistance.DEFAULT;
     /** Default for optimising query through pre computed bounding box query. */
     public static final String DEFAULT_OPTIMIZE_BBOX = "memory";
 
@@ -65,8 +62,6 @@ public class GeoDistanceQueryBuilder extends AbstractQueryBuilder<GeoDistanceQue
     private double distance;
     /** Point to use as center. */
     private GeoPoint center = new GeoPoint(Double.NaN, Double.NaN);
-    /** Algorithm to use for distance computation. */
-    private GeoDistance geoDistance = DEFAULT_GEO_DISTANCE;
     /** Whether or not to use a bbox for pre-filtering. TODO change to enum? */
     private String optimizeBbox = DEFAULT_OPTIMIZE_BBOX;
     /** How strict should geo coordinate validation be? */
@@ -156,20 +151,6 @@ public class GeoDistanceQueryBuilder extends AbstractQueryBuilder<GeoDistanceQue
         return this;
     }
 
-    /** Which type of geo distance calculation method to use. */
-    public GeoDistanceQueryBuilder geoDistance(GeoDistance geoDistance) {
-        if (geoDistance == null) {
-            throw new IllegalArgumentException("geoDistance must not be null");
-        }
-        this.geoDistance = geoDistance;
-        return this;
-    }
-
-    /** Returns geo distance calculation type to use. */
-    public GeoDistance geoDistance() {
-        return this.geoDistance;
-    }
-
     /**
      * Set this to memory or indexed if before running the distance
      * calculation you want to limit the candidates to hits in the
@@ -229,20 +210,18 @@ public class GeoDistanceQueryBuilder extends AbstractQueryBuilder<GeoDistanceQue
             GeoUtils.normalizePoint(center, true, true);
         }
 
-        double normDistance = geoDistance.normalize(this.distance, DistanceUnit.DEFAULT);
-
         if (indexVersionCreated.before(Version.V_2_2_0)) {
             GeoPointFieldMapperLegacy.GeoPointFieldType geoFieldType = ((GeoPointFieldMapperLegacy.GeoPointFieldType) fieldType);
             IndexGeoPointFieldData indexFieldData = shardContext.getForField(fieldType);
-            return new GeoDistanceRangeQuery(center, null, normDistance, true, false, geoDistance, geoFieldType, indexFieldData, optimizeBbox);
+            return new GeoDistanceRangeQuery(center, null, this.distance, true, false, geoFieldType, indexFieldData, optimizeBbox);
         }
 
         // if index created V_2_2 use (soon to be legacy) numeric encoding postings format
         // if index created V_2_3 > use prefix encoded postings format
         final GeoPointField.TermEncoding encoding = (indexVersionCreated.before(Version.V_2_3_0)) ?
             GeoPointField.TermEncoding.NUMERIC : GeoPointField.TermEncoding.PREFIX;
-        normDistance = GeoUtils.maxRadialDistance(center, normDistance);
-        return new GeoPointDistanceQuery(fieldType.name(), encoding, center.lon(), center.lat(), normDistance);
+        this.distance = GeoUtils.maxRadialDistance(center, this.distance);
+        return new GeoPointDistanceQuery(fieldType.name(), encoding, center.lon(), center.lat(), this.distance);
     }
 
     @Override
@@ -250,7 +229,6 @@ public class GeoDistanceQueryBuilder extends AbstractQueryBuilder<GeoDistanceQue
         builder.startObject(NAME);
         builder.startArray(fieldName).value(center.lon()).value(center.lat()).endArray();
         builder.field(GeoDistanceQueryParser.DISTANCE_FIELD.getPreferredName(), distance);
-        builder.field(GeoDistanceQueryParser.DISTANCE_TYPE_FIELD.getPreferredName(), geoDistance.name().toLowerCase(Locale.ROOT));
         builder.field(GeoDistanceQueryParser.OPTIMIZE_BBOX_FIELD.getPreferredName(), optimizeBbox);
         builder.field(GeoDistanceQueryParser.VALIDATION_METHOD_FIELD.getPreferredName(), validationMethod);
         printBoostAndQueryName(builder);
@@ -259,7 +237,7 @@ public class GeoDistanceQueryBuilder extends AbstractQueryBuilder<GeoDistanceQue
 
     @Override
     protected int doHashCode() {
-        return Objects.hash(center, geoDistance, optimizeBbox, distance, validationMethod);
+        return Objects.hash(center, optimizeBbox, distance, validationMethod);
     }
 
     @Override
@@ -268,8 +246,7 @@ public class GeoDistanceQueryBuilder extends AbstractQueryBuilder<GeoDistanceQue
                 (distance == other.distance) &&
                 Objects.equals(validationMethod, other.validationMethod) &&
                 Objects.equals(center, other.center) &&
-                Objects.equals(optimizeBbox, other.optimizeBbox) &&
-                Objects.equals(geoDistance, other.geoDistance);
+                Objects.equals(optimizeBbox, other.optimizeBbox);
     }
 
     @Override
@@ -280,7 +257,6 @@ public class GeoDistanceQueryBuilder extends AbstractQueryBuilder<GeoDistanceQue
         result.validationMethod = GeoValidationMethod.readGeoValidationMethodFrom(in);
         result.center = in.readGeoPoint();
         result.optimizeBbox = in.readString();
-        result.geoDistance = GeoDistance.readGeoDistanceFrom(in);
         return result;
     }
 
@@ -291,7 +267,6 @@ public class GeoDistanceQueryBuilder extends AbstractQueryBuilder<GeoDistanceQue
         validationMethod.writeTo(out);
         out.writeGeoPoint(center);
         out.writeString(optimizeBbox);
-        geoDistance.writeTo(out);
     }
 
     private QueryValidationException checkLatLon(boolean indexCreatedBeforeV2_0) {

@@ -25,7 +25,6 @@ import org.apache.lucene.spatial.geopoint.search.GeoPointDistanceRangeQuery;
 import org.apache.lucene.spatial.util.GeoDistanceUtils;
 import org.elasticsearch.Version;
 import org.elasticsearch.common.Strings;
-import org.elasticsearch.common.geo.GeoDistance;
 import org.elasticsearch.common.geo.GeoPoint;
 import org.elasticsearch.common.geo.GeoUtils;
 import org.elasticsearch.common.io.stream.StreamInput;
@@ -49,7 +48,6 @@ public class GeoDistanceRangeQueryBuilder extends AbstractQueryBuilder<GeoDistan
     public static final String NAME = "geo_distance_range";
     public static final boolean DEFAULT_INCLUDE_LOWER = true;
     public static final boolean DEFAULT_INCLUDE_UPPER = true;
-    public static final GeoDistance DEFAULT_GEO_DISTANCE = GeoDistance.DEFAULT;
     public static final DistanceUnit DEFAULT_UNIT = DistanceUnit.DEFAULT;
     public static final String DEFAULT_OPTIMIZE_BBOX = "memory";
 
@@ -61,8 +59,6 @@ public class GeoDistanceRangeQueryBuilder extends AbstractQueryBuilder<GeoDistan
     private boolean includeUpper = DEFAULT_INCLUDE_UPPER;
 
     private final GeoPoint point;
-
-    private GeoDistance geoDistance = DEFAULT_GEO_DISTANCE;
 
     private DistanceUnit unit = DEFAULT_UNIT;
 
@@ -157,18 +153,6 @@ public class GeoDistanceRangeQueryBuilder extends AbstractQueryBuilder<GeoDistan
         return includeUpper;
     }
 
-    public GeoDistanceRangeQueryBuilder geoDistance(GeoDistance geoDistance) {
-        if (geoDistance == null) {
-            throw new IllegalArgumentException("geoDistance calculation mode must not be null");
-        }
-        this.geoDistance = geoDistance;
-        return this;
-    }
-
-    public GeoDistance geoDistance() {
-        return geoDistance;
-    }
-
     public GeoDistanceRangeQueryBuilder unit(DistanceUnit unit) {
         if (unit == null) {
             throw new IllegalArgumentException("distance unit must not be null");
@@ -248,9 +232,6 @@ public class GeoDistanceRangeQueryBuilder extends AbstractQueryBuilder<GeoDistan
             } else {
                 fromValue = DistanceUnit.parse((String) from, unit, DistanceUnit.DEFAULT);
             }
-            if (indexCreatedBeforeV2_2 == true) {
-                fromValue = geoDistance.normalize(fromValue, DistanceUnit.DEFAULT);
-            }
         } else {
             fromValue = new Double(0);
         }
@@ -261,9 +242,6 @@ public class GeoDistanceRangeQueryBuilder extends AbstractQueryBuilder<GeoDistan
             } else {
                 toValue = DistanceUnit.parse((String) to, unit, DistanceUnit.DEFAULT);
             }
-            if (indexCreatedBeforeV2_2 == true) {
-                toValue = geoDistance.normalize(toValue, DistanceUnit.DEFAULT);
-            }
         } else {
             toValue = GeoDistanceUtils.maxRadialDistanceMeters(point.lon(), point.lat());
         }
@@ -272,8 +250,8 @@ public class GeoDistanceRangeQueryBuilder extends AbstractQueryBuilder<GeoDistan
         if (indexVersionCreated.before(Version.V_2_2_0)) {
             GeoPointFieldMapperLegacy.GeoPointFieldType geoFieldType = ((GeoPointFieldMapperLegacy.GeoPointFieldType) fieldType);
             IndexGeoPointFieldData indexFieldData = context.getForField(fieldType);
-            return new GeoDistanceRangeQuery(point, fromValue, toValue, includeLower, includeUpper, geoDistance, geoFieldType,
-                indexFieldData, optimizeBbox);
+            return new GeoDistanceRangeQuery(point, fromValue, toValue, includeLower, includeUpper, geoFieldType, indexFieldData,
+                optimizeBbox);
         }
 
         // if index created V_2_2 use (soon to be legacy) numeric encoding postings format
@@ -295,7 +273,6 @@ public class GeoDistanceRangeQueryBuilder extends AbstractQueryBuilder<GeoDistan
         builder.field(GeoDistanceRangeQueryParser.INCLUDE_LOWER_FIELD.getPreferredName(), includeLower);
         builder.field(GeoDistanceRangeQueryParser.INCLUDE_UPPER_FIELD.getPreferredName(), includeUpper);
         builder.field(GeoDistanceRangeQueryParser.UNIT_FIELD.getPreferredName(), unit);
-        builder.field(GeoDistanceRangeQueryParser.DISTANCE_TYPE_FIELD.getPreferredName(), geoDistance.name().toLowerCase(Locale.ROOT));
         builder.field(GeoDistanceRangeQueryParser.OPTIMIZE_BBOX_FIELD.getPreferredName(), optimizeBbox);
         builder.field(GeoDistanceRangeQueryParser.VALIDATION_METHOD.getPreferredName(), validationMethod);
         printBoostAndQueryName(builder);
@@ -310,7 +287,6 @@ public class GeoDistanceRangeQueryBuilder extends AbstractQueryBuilder<GeoDistan
         queryBuilder.includeLower = in.readBoolean();
         queryBuilder.includeUpper = in.readBoolean();
         queryBuilder.unit = DistanceUnit.valueOf(in.readString());
-        queryBuilder.geoDistance = GeoDistance.readGeoDistanceFrom(in);
         queryBuilder.optimizeBbox = in.readString();
         queryBuilder.validationMethod = GeoValidationMethod.readGeoValidationMethodFrom(in);
         return queryBuilder;
@@ -325,7 +301,6 @@ public class GeoDistanceRangeQueryBuilder extends AbstractQueryBuilder<GeoDistan
         out.writeBoolean(includeLower);
         out.writeBoolean(includeUpper);
         out.writeString(unit.name());
-        geoDistance.writeTo(out);;
         out.writeString(optimizeBbox);
         validationMethod.writeTo(out);
     }
@@ -338,14 +313,13 @@ public class GeoDistanceRangeQueryBuilder extends AbstractQueryBuilder<GeoDistan
                 (Objects.equals(to, other.to)) &&
                 (Objects.equals(includeUpper, other.includeUpper)) &&
                 (Objects.equals(includeLower, other.includeLower)) &&
-                (Objects.equals(geoDistance, other.geoDistance)) &&
                 (Objects.equals(optimizeBbox, other.optimizeBbox)) &&
                 (Objects.equals(validationMethod, other.validationMethod)));
     }
 
     @Override
     protected int doHashCode() {
-        return Objects.hash(fieldName, point, from, to, includeUpper, includeLower, geoDistance, optimizeBbox, validationMethod);
+        return Objects.hash(fieldName, point, from, to, includeUpper, includeLower, optimizeBbox, validationMethod);
     }
 
     @Override

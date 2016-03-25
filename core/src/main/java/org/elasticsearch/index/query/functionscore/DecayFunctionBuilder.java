@@ -21,10 +21,10 @@ package org.elasticsearch.index.query.functionscore;
 
 import org.apache.lucene.index.LeafReaderContext;
 import org.apache.lucene.search.Explanation;
+import org.apache.lucene.spatial.util.GeoDistanceUtils;
 import org.elasticsearch.ElasticsearchParseException;
 import org.elasticsearch.common.ParsingException;
 import org.elasticsearch.common.bytes.BytesReference;
-import org.elasticsearch.common.geo.GeoDistance;
 import org.elasticsearch.common.geo.GeoPoint;
 import org.elasticsearch.common.geo.GeoUtils;
 import org.elasticsearch.common.io.stream.StreamInput;
@@ -313,8 +313,6 @@ public abstract class DecayFunctionBuilder<DFB extends DecayFunctionBuilder> ext
         private final GeoPoint origin;
         private final IndexGeoPointFieldData fieldData;
 
-        private static final GeoDistance distFunction = GeoDistance.DEFAULT;
-
         public GeoFieldDataScoreFunction(GeoPoint origin, double scale, double decay, double offset, DecayFunction func,
                                          IndexGeoPointFieldData fieldData, MultiValueMode mode) {
             super(scale, decay, offset, func, mode);
@@ -344,7 +342,7 @@ public abstract class DecayFunctionBuilder<DFB extends DecayFunctionBuilder> ext
                 @Override
                 public double valueAt(int index) {
                     GeoPoint other = geoPointValues.valueAt(index);
-                    return Math.max(0.0d, distFunction.calculate(origin.lat(), origin.lon(), other.lat(), other.lon(), DistanceUnit.METERS) - offset);
+                    return Math.max(0.0d, GeoDistanceUtils.haversin(origin.lat(), origin.lon(), other.lat(), other.lon()) - offset);
                 }
             }, 0.0);
         }

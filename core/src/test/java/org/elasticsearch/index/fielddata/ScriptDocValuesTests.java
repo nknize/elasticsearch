@@ -19,7 +19,7 @@
 
 package org.elasticsearch.index.fielddata;
 
-import org.elasticsearch.common.geo.GeoDistance;
+import org.apache.lucene.spatial.util.GeoDistanceUtils;
 import org.elasticsearch.common.geo.GeoPoint;
 import org.elasticsearch.common.unit.DistanceUnit;
 import org.elasticsearch.test.ESTestCase;
@@ -39,12 +39,12 @@ public class ScriptDocValuesTests extends ESTestCase {
                 }
                 return points[i];
             }
-            
+
             @Override
             public void setDocument(int docId) {
                 this.docID = docId;
             }
-            
+
             @Override
             public int count() {
                 if (docID != 0) {
@@ -94,16 +94,16 @@ public class ScriptDocValuesTests extends ESTestCase {
 
         final double otherLat = randomLat();
         final double otherLon = randomLon();
-        
-        assertEquals(GeoDistance.ARC.calculate(lat, lon, otherLat, otherLon, DistanceUnit.KILOMETERS),
+
+        assertEquals(DistanceUnit.KILOMETERS.fromMeters(GeoDistanceUtils.haversin(lat, lon, otherLat, otherLon)),
                 script.arcDistanceInKm(otherLat, otherLon), 0.01);
-        assertEquals(GeoDistance.ARC.calculate(lat, lon, otherLat, otherLon, DistanceUnit.KILOMETERS),
+        assertEquals(DistanceUnit.KILOMETERS.fromMeters(GeoDistanceUtils.haversin(lat, lon, otherLat, otherLon)),
                 script.arcDistanceInKmWithDefault(otherLat, otherLon, 42), 0.01);
         assertEquals(42, emptyScript.arcDistanceInKmWithDefault(otherLat, otherLon, 42), 0);
 
-        assertEquals(GeoDistance.PLANE.calculate(lat, lon, otherLat, otherLon, DistanceUnit.KILOMETERS),
+        assertEquals(DistanceUnit.KILOMETERS.fromMeters(GeoDistanceUtils.haversin(lat, lon, otherLat, otherLon)),
                 script.distanceInKm(otherLat, otherLon), 0.01);
-        assertEquals(GeoDistance.PLANE.calculate(lat, lon, otherLat, otherLon, DistanceUnit.KILOMETERS),
+        assertEquals(DistanceUnit.KILOMETERS.fromMeters(GeoDistanceUtils.haversin(lat, lon, otherLat, otherLon)),
                 script.distanceInKmWithDefault(otherLat, otherLon, 42), 0.01);
         assertEquals(42, emptyScript.distanceInKmWithDefault(otherLat, otherLon, 42), 0);
     }

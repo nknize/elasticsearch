@@ -20,7 +20,6 @@ package org.elasticsearch.search.aggregations.bucket.range.geodistance;
 
 import org.elasticsearch.common.ParseField;
 import org.elasticsearch.common.ParseFieldMatcher;
-import org.elasticsearch.common.geo.GeoDistance;
 import org.elasticsearch.common.geo.GeoPoint;
 import org.elasticsearch.common.io.stream.StreamInput;
 import org.elasticsearch.common.io.stream.StreamOutput;
@@ -45,7 +44,6 @@ public class GeoDistanceParser extends GeoPointValuesSourceParser {
 
     static final ParseField ORIGIN_FIELD = new ParseField("origin", "center", "point", "por");
     static final ParseField UNIT_FIELD = new ParseField("unit");
-    static final ParseField DISTANCE_TYPE_FIELD = new ParseField("distance_type");
 
     private GeoPointParser geoPointParser = new GeoPointParser(InternalGeoDistance.TYPE, ORIGIN_FIELD);
 
@@ -112,10 +110,6 @@ public class GeoDistanceParser extends GeoPointValuesSourceParser {
         if (unit != null) {
             factory.unit(unit);
         }
-        GeoDistance distanceType = (GeoDistance) otherOptions.get(DISTANCE_TYPE_FIELD);
-        if (distanceType != null) {
-            factory.distanceType(distanceType);
-        }
         return factory;
     }
 
@@ -128,10 +122,6 @@ public class GeoDistanceParser extends GeoPointValuesSourceParser {
             if (parseFieldMatcher.match(currentFieldName, UNIT_FIELD)) {
                 DistanceUnit unit = DistanceUnit.fromString(parser.text());
                 otherOptions.put(UNIT_FIELD, unit);
-                return true;
-            } else if (parseFieldMatcher.match(currentFieldName, DISTANCE_TYPE_FIELD)) {
-                GeoDistance distanceType = GeoDistance.fromString(parser.text());
-                otherOptions.put(DISTANCE_TYPE_FIELD, distanceType);
                 return true;
             }
         } else if (token == XContentParser.Token.VALUE_BOOLEAN) {
