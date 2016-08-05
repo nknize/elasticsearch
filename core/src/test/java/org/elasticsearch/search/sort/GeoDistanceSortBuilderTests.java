@@ -20,8 +20,6 @@
 package org.elasticsearch.search.sort;
 
 
-import org.apache.lucene.queryparser.xml.builders.MatchAllDocsQueryBuilder;
-import org.apache.lucene.search.MatchAllDocsQuery;
 import org.apache.lucene.search.SortField;
 import org.elasticsearch.ElasticsearchParseException;
 import org.elasticsearch.common.ParseFieldMatcher;
@@ -260,7 +258,7 @@ public class GeoDistanceSortBuilderTests extends AbstractSortTestCase<GeoDistanc
             assertEquals("illegal latitude value [269.384765625] for [GeoDistanceSort] for field [reverse].", e.getMessage());
         }
     }
-    
+
     public void testCoerceIsDeprecated() throws IOException {
         String json = "{\n" +
                 "  \"testname\" : [ {\n" +
@@ -268,7 +266,7 @@ public class GeoDistanceSortBuilderTests extends AbstractSortTestCase<GeoDistanc
                 "    \"lon\" : -51.94128329747579\n" +
                 "  } ],\n" +
                 "  \"unit\" : \"m\",\n" +
-                "  \"distance_type\" : \"sloppy_arc\",\n" +
+                "  \"distance_type\" : \"arc\",\n" +
                 "  \"mode\" : \"SUM\",\n" +
                 "  \"coerce\" : true\n" +
                 "}";
@@ -279,7 +277,7 @@ public class GeoDistanceSortBuilderTests extends AbstractSortTestCase<GeoDistanc
 
         IllegalArgumentException e = expectThrows(IllegalArgumentException.class, () -> GeoDistanceSortBuilder.fromXContent(context, ""));
         assertTrue(e.getMessage().startsWith("Deprecated field "));
-        
+
     }
 
     public void testIgnoreMalformedIsDeprecated() throws IOException {
@@ -289,7 +287,7 @@ public class GeoDistanceSortBuilderTests extends AbstractSortTestCase<GeoDistanc
                 "    \"lon\" : -51.94128329747579\n" +
                 "  } ],\n" +
                 "  \"unit\" : \"m\",\n" +
-                "  \"distance_type\" : \"sloppy_arc\",\n" +
+                "  \"distance_type\" : \"arc\",\n" +
                 "  \"mode\" : \"SUM\",\n" +
                 "  \"ignore_malformed\" : true\n" +
                 "}";
@@ -300,7 +298,7 @@ public class GeoDistanceSortBuilderTests extends AbstractSortTestCase<GeoDistanc
 
         IllegalArgumentException e = expectThrows(IllegalArgumentException.class, () -> GeoDistanceSortBuilder.fromXContent(context, ""));
         assertTrue(e.getMessage().startsWith("Deprecated field "));
-        
+
     }
 
     public void testSortModeSumIsRejectedInJSON() throws IOException {
@@ -310,7 +308,7 @@ public class GeoDistanceSortBuilderTests extends AbstractSortTestCase<GeoDistanc
                 "    \"lon\" : -51.94128329747579\n" +
                 "  } ],\n" +
                 "  \"unit\" : \"m\",\n" +
-                "  \"distance_type\" : \"sloppy_arc\",\n" +
+                "  \"distance_type\" : \"arc\",\n" +
                 "  \"mode\" : \"SUM\"\n" +
                 "}";
         XContentParser itemParser = XContentHelper.createParser(new BytesArray(json));
@@ -327,7 +325,7 @@ public class GeoDistanceSortBuilderTests extends AbstractSortTestCase<GeoDistanc
                 "    \"VDcvDuFjE\" : [ \"7umzzv8eychg\", \"dmdgmt5z13uw\", " +
                 "    \"ezu09wxw6v4c\", \"kc7s3515p6k6\", \"jgeuvjwrmfzn\", \"kcpcfj7ruyf8\" ],\n" +
                 "    \"unit\" : \"m\",\n" +
-                "    \"distance_type\" : \"sloppy_arc\",\n" +
+                "    \"distance_type\" : \"arc\",\n" +
                 "    \"mode\" : \"MAX\",\n" +
                 "    \"nested_filter\" : {\n" +
                 "      \"ids\" : {\n" +

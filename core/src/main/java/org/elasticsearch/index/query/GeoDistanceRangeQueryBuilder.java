@@ -37,10 +37,9 @@ import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.common.xcontent.XContentParser;
 import org.elasticsearch.index.fielddata.IndexGeoPointFieldData;
 import org.elasticsearch.index.mapper.MappedFieldType;
-import org.elasticsearch.index.mapper.geo.BaseGeoPointFieldMapper;
+import org.elasticsearch.index.mapper.geo.BaseGeoPointFieldMapper.GeoPointFieldType;
 import org.elasticsearch.index.mapper.geo.GeoPointFieldMapper;
-import org.elasticsearch.index.mapper.geo.GeoPointFieldMapperLegacy;
-import org.elasticsearch.index.search.geo.GeoDistanceRangeQuery;
+import org.elasticsearch.index.search.geo.LegacyGeoDistanceRangeQuery;
 
 import java.io.IOException;
 import java.util.Locale;
@@ -52,7 +51,7 @@ public class GeoDistanceRangeQueryBuilder extends AbstractQueryBuilder<GeoDistan
 
     public static final boolean DEFAULT_INCLUDE_LOWER = true;
     public static final boolean DEFAULT_INCLUDE_UPPER = true;
-    public static final GeoDistance DEFAULT_GEO_DISTANCE = GeoDistance.DEFAULT;
+    public static final GeoDistance DEFAULT_GEO_DISTANCE = GeoDistance.ARC;
     public static final DistanceUnit DEFAULT_UNIT = DistanceUnit.DEFAULT;
     public static final String DEFAULT_OPTIMIZE_BBOX = "memory";
 
@@ -302,7 +301,7 @@ public class GeoDistanceRangeQueryBuilder extends AbstractQueryBuilder<GeoDistan
                 throw new QueryShardException(context, "failed to find geo_point field [" + fieldName + "]");
             }
         }
-        if (!(fieldType instanceof BaseGeoPointFieldMapper.GeoPointFieldType)) {
+        if (!(fieldType instanceof GeoPointFieldType)) {
             throw new QueryShardException(context, "field [" + fieldName + "] is not a geo_point field");
         }
 
@@ -332,9 +331,6 @@ public class GeoDistanceRangeQueryBuilder extends AbstractQueryBuilder<GeoDistan
             } else {
                 fromValue = DistanceUnit.parse((String) from, unit, DistanceUnit.DEFAULT);
             }
-            if (indexCreatedBeforeV2_2 == true) {
-                fromValue = geoDistance.normalize(fromValue, DistanceUnit.DEFAULT);
-            }
         } else {
             fromValue = 0.0;
         }
@@ -345,19 +341,15 @@ public class GeoDistanceRangeQueryBuilder extends AbstractQueryBuilder<GeoDistan
             } else {
                 toValue = DistanceUnit.parse((String) to, unit, DistanceUnit.DEFAULT);
             }
-            if (indexCreatedBeforeV2_2 == true) {
-                toValue = geoDistance.normalize(toValue, DistanceUnit.DEFAULT);
-            }
         } else {
             toValue = GeoUtils.maxRadialDistanceMeters(point.lat(), point.lon());
         }
 
         final Version indexVersionCreated = context.indexVersionCreated();
         if (indexVersionCreated.before(Version.V_2_2_0)) {
-            GeoPointFieldMapperLegacy.GeoPointFieldType geoFieldType = ((GeoPointFieldMapperLegacy.GeoPointFieldType) fieldType);
             IndexGeoPointFieldData indexFieldData = context.getForField(fieldType);
-            return new GeoDistanceRangeQuery(point, fromValue, toValue, includeLower, includeUpper, geoDistance, geoFieldType,
-                indexFieldData, optimizeBbox);
+            return new LegacyGeoDistanceRangeQuery(point, fromValue, toValue, includeLower, includeUpper, geoDistance,
+                ((GeoPointFieldType) fieldType), indexFieldData, optimizeBbox);
         }
 
         // if index created V_2_2 use (soon to be legacy) numeric encoding postings format

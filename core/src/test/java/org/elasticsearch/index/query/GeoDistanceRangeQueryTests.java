@@ -30,7 +30,7 @@ import org.elasticsearch.common.geo.GeoPoint;
 import org.elasticsearch.common.geo.GeoUtils;
 import org.elasticsearch.common.unit.DistanceUnit;
 import org.elasticsearch.index.mapper.MapperService;
-import org.elasticsearch.index.search.geo.GeoDistanceRangeQuery;
+import org.elasticsearch.index.search.geo.LegacyGeoDistanceRangeQuery;
 import org.elasticsearch.test.AbstractQueryTestCase;
 import org.elasticsearch.test.geo.RandomGeoGenerator;
 
@@ -132,8 +132,8 @@ public class GeoDistanceRangeQueryTests extends AbstractQueryTestCase<GeoDistanc
     }
 
     private void assertLegacyQuery(GeoDistanceRangeQueryBuilder queryBuilder, Query query) throws IOException {
-        assertThat(query, instanceOf(GeoDistanceRangeQuery.class));
-        GeoDistanceRangeQuery geoQuery = (GeoDistanceRangeQuery) query;
+        assertThat(query, instanceOf(LegacyGeoDistanceRangeQuery.class));
+        LegacyGeoDistanceRangeQuery geoQuery = (LegacyGeoDistanceRangeQuery) query;
         assertThat(geoQuery.fieldName(), equalTo(queryBuilder.fieldName()));
         if (queryBuilder.point() != null) {
             GeoPoint expectedPoint = new GeoPoint(queryBuilder.point());
@@ -149,9 +149,6 @@ public class GeoDistanceRangeQueryTests extends AbstractQueryTestCase<GeoDistanc
             if (queryBuilder.unit() != null) {
                 fromValue = queryBuilder.unit().toMeters(fromValue);
             }
-            if (queryBuilder.geoDistance() != null) {
-                fromValue = queryBuilder.geoDistance().normalize(fromValue, DistanceUnit.DEFAULT);
-            }
             double fromSlop = Math.abs(fromValue) / 1000;
             if (queryBuilder.includeLower() == false) {
                 fromSlop = NumericUtils.sortableLongToDouble((NumericUtils.doubleToSortableLong(Math.abs(fromValue)) + 1L)) / 1000.0;
@@ -162,9 +159,6 @@ public class GeoDistanceRangeQueryTests extends AbstractQueryTestCase<GeoDistanc
             double toValue = ((Number) queryBuilder.to()).doubleValue();
             if (queryBuilder.unit() != null) {
                 toValue = queryBuilder.unit().toMeters(toValue);
-            }
-            if (queryBuilder.geoDistance() != null) {
-                toValue = queryBuilder.geoDistance().normalize(toValue, DistanceUnit.DEFAULT);
             }
             double toSlop = Math.abs(toValue) / 1000;
             if (queryBuilder.includeUpper() == false) {
@@ -305,7 +299,7 @@ public class GeoDistanceRangeQueryTests extends AbstractQueryTestCase<GeoDistanc
                 "    \"include_lower\" : true,\n" +
                 "    \"include_upper\" : true,\n" +
                 "    \"unit\" : \"m\",\n" +
-                "    \"distance_type\" : \"sloppy_arc\",\n" +
+                "    \"distance_type\" : \"arc\",\n" +
                 "    \"optimize_bbox\" : \"memory\",\n" +
                 "    \"validation_method\" : \"STRICT\",\n" +
                 "    \"ignore_unmapped\" : false,\n" +
@@ -327,7 +321,7 @@ public class GeoDistanceRangeQueryTests extends AbstractQueryTestCase<GeoDistanc
                 "    \"include_lower\" : true,\n" +
                 "    \"include_upper\" : true,\n" +
                 "    \"unit\" : \"m\",\n" +
-                "    \"distance_type\" : \"sloppy_arc\",\n" +
+                "    \"distance_type\" : \"arc\",\n" +
                 "    \"optimize_bbox\" : \"memory\",\n" +
                 "    \"coerce\" : true,\n" +
                 "    \"ignore_unmapped\" : false,\n" +
@@ -348,7 +342,7 @@ public class GeoDistanceRangeQueryTests extends AbstractQueryTestCase<GeoDistanc
                 "    \"include_lower\" : true,\n" +
                 "    \"include_upper\" : true,\n" +
                 "    \"unit\" : \"m\",\n" +
-                "    \"distance_type\" : \"sloppy_arc\",\n" +
+                "    \"distance_type\" : \"arc\",\n" +
                 "    \"optimize_bbox\" : \"memory\",\n" +
                 "    \"ignore_malformed\" : true,\n" +
                 "    \"ignore_unmapped\" : false,\n" +

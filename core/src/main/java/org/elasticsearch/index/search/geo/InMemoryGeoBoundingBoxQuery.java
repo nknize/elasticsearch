@@ -33,8 +33,9 @@ import java.io.IOException;
 import java.util.Objects;
 
 /**
- *
+ * @deprecated this is only used for geo_point types created before v2.2
  */
+@Deprecated
 public class InMemoryGeoBoundingBoxQuery extends Query {
 
     private final GeoPoint topLeft;
