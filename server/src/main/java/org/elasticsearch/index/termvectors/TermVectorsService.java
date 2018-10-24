@@ -162,7 +162,7 @@ public class TermVectorsService  {
      * @deprecated : removed in Lucene 8.0
      * @todo switch to {@link MultiFields#getIndexedFields}
      **/
-     private static Fields xGetMultiFields(IndexReader reader) throws IOException {
+     public static Fields xGetMultiFields(IndexReader reader) throws IOException {
          final List<LeafReaderContext> leaves = reader.leaves();
          switch (leaves.size()) {
              case 1:
