@@ -257,7 +257,7 @@ public class MoreLikeThisQueryBuilderTests extends AbstractQueryTestCase<MoreLik
         for (String fieldName : fieldNames) {
             index.addField(fieldName, text, new WhitespaceAnalyzer());
         }
-        return TermVectorsService.xGetMultiFields(index.createSearcher().getIndexReader());
+        return index.createSearcher().getIndexReader().getTermVectors(0);
     }
 
     @Override
