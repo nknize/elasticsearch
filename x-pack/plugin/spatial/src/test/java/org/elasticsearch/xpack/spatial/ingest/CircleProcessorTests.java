@@ -31,7 +31,6 @@ import org.elasticsearch.index.mapper.MappedFieldType;
 import org.elasticsearch.index.query.QueryShardContext;
 import org.elasticsearch.index.query.VectorGeoShapeQueryProcessor;
 import org.elasticsearch.ingest.IngestDocument;
-import org.elasticsearch.ingest.RandomDocumentPicks;
 import org.elasticsearch.xpack.spatial.SpatialUtils;
 import org.elasticsearch.xpack.spatial.index.mapper.ShapeFieldMapper;
 import org.elasticsearch.xpack.spatial.index.mapper.ShapeIndexer;
@@ -43,7 +42,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import static org.elasticsearch.ingest.IngestDocumentMatcher.assertIngestDocument;
 import static org.elasticsearch.xpack.spatial.ingest.AbstractGeometryProcessor.GeometryProcessorFieldType;
 import static org.elasticsearch.xpack.spatial.ingest.AbstractGeometryProcessor.GeometryProcessorFieldType.GEO_SHAPE;
 import static org.elasticsearch.xpack.spatial.ingest.AbstractGeometryProcessor.GeometryProcessorFieldType.SHAPE;
