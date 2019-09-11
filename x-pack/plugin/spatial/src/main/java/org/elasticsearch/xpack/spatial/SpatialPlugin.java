@@ -11,12 +11,14 @@ import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.index.mapper.GeoShapeFieldMapper;
 import org.elasticsearch.index.mapper.Mapper;
 import org.elasticsearch.ingest.Processor;
+import org.elasticsearch.license.XPackLicenseState;
 import org.elasticsearch.plugins.ActionPlugin;
 import org.elasticsearch.plugins.GeoPlugin;
 import org.elasticsearch.plugins.IngestPlugin;
 import org.elasticsearch.plugins.MapperPlugin;
 import org.elasticsearch.plugins.Plugin;
 import org.elasticsearch.plugins.SearchPlugin;
+import org.elasticsearch.xpack.core.XPackPlugin;
 import org.elasticsearch.xpack.core.action.XPackInfoFeatureAction;
 import org.elasticsearch.xpack.core.action.XPackUsageFeatureAction;
 import org.elasticsearch.xpack.spatial.index.mapper.ShapeFieldMapper;
@@ -27,17 +29,19 @@ import org.elasticsearch.xpack.spatial.projections.Proj4JHandlerFactory;
 
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
 import static java.util.Collections.singletonList;
-import static java.util.Map.entry;
 
 public class SpatialPlugin extends Plugin implements ActionPlugin, GeoPlugin, MapperPlugin, SearchPlugin, IngestPlugin {
 
     public SpatialPlugin(Settings settings) {
     }
+
+    public static XPackLicenseState getLicenseState() { return XPackPlugin.getSharedLicenseState(); }
 
     @Override
     public List<ActionPlugin.ActionHandler<? extends ActionRequest, ? extends ActionResponse>> getActions() {
@@ -60,13 +64,19 @@ public class SpatialPlugin extends Plugin implements ActionPlugin, GeoPlugin, Ma
 
     @Override
     public Map<String, Processor.Factory> getProcessors(Processor.Parameters parameters) {
-        return Map.ofEntries(
-            entry(CircleProcessor.TYPE, new CircleProcessor.Factory()),
-            entry(ReprojectionProcessor.TYPE.getPreferredName(), new ReprojectionProcessor.Factory()));
+        Map<String, Processor.Factory> processors = new HashMap<>();
+        processors.put(CircleProcessor.TYPE, new CircleProcessor.Factory());
+        if (getLicenseState().isSpatialProjectionAllowed()) {
+            processors.put(ReprojectionProcessor.TYPE.getPreferredName(), new ReprojectionProcessor.Factory());
+        }
+        return processors;
     }
 
     @Override
     public List<GeoShapeFieldMapper.CRSHandlerFactory> getCRSHandlerFactories() {
-        return List.of(new Proj4JHandlerFactory());
+        if (getLicenseState().isSpatialProjectionAllowed()) {
+            return List.of(new Proj4JHandlerFactory());
+        }
+        return Collections.emptyList();
     }
 }
