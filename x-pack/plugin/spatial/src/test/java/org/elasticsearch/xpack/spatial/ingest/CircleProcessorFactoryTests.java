@@ -35,7 +35,7 @@ public class CircleProcessorFactoryTests extends ESTestCase {
         assertThat(processor.field(), equalTo("field1"));
         assertThat(processor.targetField(), equalTo("field1"));
         assertThat(processor.errorDistance(), equalTo(0.002));
-        assertThat(processor.shapeType(), equalTo(CircleProcessor.CircleShapeFieldType.GEO_SHAPE));
+        assertThat(processor.shapeType(), equalTo(CircleProcessor.GeometryProcessorFieldType.GEO_SHAPE));
     }
 
     public void testCreateShape() {
@@ -49,7 +49,7 @@ public class CircleProcessorFactoryTests extends ESTestCase {
         assertThat(processor.field(), equalTo("field1"));
         assertThat(processor.targetField(), equalTo("field1"));
         assertThat(processor.errorDistance(), equalTo(0.002));
-        assertThat(processor.shapeType(), equalTo(CircleProcessor.CircleShapeFieldType.SHAPE));
+        assertThat(processor.shapeType(), equalTo(CircleProcessor.GeometryProcessorFieldType.SHAPE));
     }
 
     public void testCreateInvalidShapeType() {
@@ -81,7 +81,7 @@ public class CircleProcessorFactoryTests extends ESTestCase {
         assertThat(processor.field(), equalTo("field1"));
         assertThat(processor.targetField(), equalTo("other"));
         assertThat(processor.errorDistance(), equalTo(0.002));
-        assertThat(processor.shapeType(), equalTo(CircleProcessor.CircleShapeFieldType.GEO_SHAPE));
+        assertThat(processor.shapeType(), equalTo(CircleProcessor.GeometryProcessorFieldType.GEO_SHAPE));
     }
 
     public void testCreateWithNoErrorDistanceDefined() {

@@ -25,8 +25,6 @@ import org.elasticsearch.geometry.Circle;
 import org.elasticsearch.geometry.Geometry;
 import org.elasticsearch.geometry.Point;
 import org.elasticsearch.geometry.Polygon;
-import org.elasticsearch.geometry.utils.StandardValidator;
-import org.elasticsearch.geometry.utils.WellKnownText;
 import org.elasticsearch.index.mapper.GeoShapeFieldMapper;
 import org.elasticsearch.index.mapper.GeoShapeIndexer;
 import org.elasticsearch.index.mapper.MappedFieldType;
@@ -34,7 +32,6 @@ import org.elasticsearch.index.query.QueryShardContext;
 import org.elasticsearch.index.query.VectorGeoShapeQueryProcessor;
 import org.elasticsearch.ingest.IngestDocument;
 import org.elasticsearch.ingest.RandomDocumentPicks;
-import org.elasticsearch.test.ESTestCase;
 import org.elasticsearch.xpack.spatial.SpatialUtils;
 import org.elasticsearch.xpack.spatial.index.mapper.ShapeFieldMapper;
 import org.elasticsearch.xpack.spatial.index.mapper.ShapeIndexer;
@@ -47,22 +44,26 @@ import java.util.List;
 import java.util.Map;
 
 import static org.elasticsearch.ingest.IngestDocumentMatcher.assertIngestDocument;
-import static org.elasticsearch.xpack.spatial.ingest.CircleProcessor.CircleShapeFieldType;
-import static org.elasticsearch.xpack.spatial.ingest.CircleProcessor.CircleShapeFieldType.GEO_SHAPE;
-import static org.elasticsearch.xpack.spatial.ingest.CircleProcessor.CircleShapeFieldType.SHAPE;
-import static org.hamcrest.Matchers.containsString;
+import static org.elasticsearch.xpack.spatial.ingest.AbstractGeometryProcessor.GeometryProcessorFieldType;
+import static org.elasticsearch.xpack.spatial.ingest.AbstractGeometryProcessor.GeometryProcessorFieldType.GEO_SHAPE;
+import static org.elasticsearch.xpack.spatial.ingest.AbstractGeometryProcessor.GeometryProcessorFieldType.SHAPE;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.instanceOf;
 import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-public class CircleProcessorTests extends ESTestCase {
-    private static final WellKnownText WKT = new WellKnownText(true, new StandardValidator(true));
+public class CircleProcessorTests extends BaseGeometryProcessorTestCase {
+
+    @Override
+    public CircleProcessor newProcessor(String tag, String field, String targetField, boolean ignoreMissing,
+                                        AbstractGeometryProcessor.GeometryProcessorFieldType shapeFieldType) {
+        return new CircleProcessor(tag, field, targetField, ignoreMissing, 2, shapeFieldType);
+    }
 
     public void testNumSides() {
         double radiusDistanceMeters = randomDoubleBetween(0.01, 6371000, true);
-        CircleShapeFieldType shapeType = randomFrom(SHAPE, GEO_SHAPE);
+        GeometryProcessorFieldType shapeType = randomFrom(SHAPE, GEO_SHAPE);
         CircleProcessor processor = new CircleProcessor("tag", "field", "field", false, radiusDistanceMeters, shapeType);
 
         // radius is same as error distance
@@ -76,36 +77,7 @@ public class CircleProcessorTests extends ESTestCase {
 
     }
 
-    public void testFieldNotFound() throws Exception {
-        CircleProcessor processor = new CircleProcessor("tag", "field", "field", false, 10, GEO_SHAPE);
-        IngestDocument ingestDocument = RandomDocumentPicks.randomIngestDocument(random(), new HashMap<>());
-        Exception e = expectThrows(Exception.class, () -> processor.execute(ingestDocument));
-        assertThat(e.getMessage(), containsString("not present as part of path [field]"));
-    }
-
-    public void testFieldNotFoundWithIgnoreMissing() throws Exception {
-        CircleProcessor processor = new CircleProcessor("tag", "field", "field", true, 10, GEO_SHAPE);
-        IngestDocument originalIngestDocument = RandomDocumentPicks.randomIngestDocument(random(), new HashMap<>());
-        IngestDocument ingestDocument = new IngestDocument(originalIngestDocument);
-        processor.execute(ingestDocument);
-        assertIngestDocument(originalIngestDocument, ingestDocument);
-    }
-
-    public void testNullValue() throws Exception {
-        CircleProcessor processor = new CircleProcessor("tag", "field", "field", false, 10, GEO_SHAPE);
-        IngestDocument ingestDocument = RandomDocumentPicks.randomIngestDocument(random(), Collections.singletonMap("field", null));
-        Exception e = expectThrows(Exception.class, () -> processor.execute(ingestDocument));
-        assertThat(e.getMessage(), equalTo("field [field] is null, cannot process it."));
-    }
-
-    public void testNullValueWithIgnoreMissing() throws Exception {
-        CircleProcessor processor = new CircleProcessor("tag", "field", "field", true, 10, GEO_SHAPE);
-        IngestDocument originalIngestDocument = RandomDocumentPicks.randomIngestDocument(random(), Collections.singletonMap("field", null));
-        IngestDocument ingestDocument = new IngestDocument(originalIngestDocument);
-        processor.execute(ingestDocument);
-        assertIngestDocument(originalIngestDocument, ingestDocument);
-    }
-
+    @Override
     @SuppressWarnings("unchecked")
     public void testJson() throws IOException {
         Circle circle = new Circle(101.0, 1.0, 10);
@@ -128,6 +100,7 @@ public class CircleProcessorTests extends ESTestCase {
         assertThat(polyMap, equalTo(expected.v2()));
     }
 
+    @Override
     public void testWKT() {
         Circle circle = new Circle(101.0, 0.0, 2);
         HashMap<String, Object> map = new HashMap<>();
@@ -146,17 +119,10 @@ public class CircleProcessorTests extends ESTestCase {
         IngestDocument ingestDocument = new IngestDocument(map, Collections.emptyMap());
         CircleProcessor processor = new CircleProcessor("tag", "field", "field", false, 10, GEO_SHAPE);
         IllegalArgumentException e = expectThrows(IllegalArgumentException.class, () -> processor.execute(ingestDocument));
-        assertThat(e.getMessage(), equalTo("invalid circle definition"));
+        assertThat(e.getMessage(), equalTo("invalid shape definition"));
         map.put("field", "POINT (30 10)");
         e = expectThrows(IllegalArgumentException.class, () -> processor.execute(ingestDocument));
-        assertThat(e.getMessage(), equalTo("invalid circle definition"));
-    }
-
-    public void testMissingField() {
-        IngestDocument ingestDocument = new IngestDocument(new HashMap<>(), Collections.emptyMap());
-        CircleProcessor processor = new CircleProcessor("tag", "field", "field", false, 10, GEO_SHAPE);
-        IllegalArgumentException e = expectThrows(IllegalArgumentException.class, () -> processor.execute(ingestDocument));
-        assertThat(e.getMessage(), equalTo("field [field] not present as part of path [field]"));
+        assertThat(e.getMessage(), equalTo("invalid shape definition"));
     }
 
     public void testInvalidType() {
@@ -171,7 +137,7 @@ public class CircleProcessorTests extends ESTestCase {
         for (Object value : new Object[] { null, 4.0, "not_circle"}) {
             field.put("type", value);
             IllegalArgumentException e = expectThrows(IllegalArgumentException.class, () -> processor.execute(ingestDocument));
-            assertThat(e.getMessage(), equalTo("invalid circle definition"));
+            assertThat(e.getMessage(), equalTo("invalid shape definition"));
         }
     }
 
@@ -187,7 +153,7 @@ public class CircleProcessorTests extends ESTestCase {
         for (Object value : new Object[] { null, "not_circle"}) {
             field.put("coordinates", value);
             IllegalArgumentException e = expectThrows(IllegalArgumentException.class, () -> processor.execute(ingestDocument));
-            assertThat(e.getMessage(), equalTo("invalid circle definition"));
+            assertThat(e.getMessage(), equalTo("invalid shape definition"));
         }
     }
 
@@ -203,7 +169,7 @@ public class CircleProcessorTests extends ESTestCase {
         for (Object value : new Object[] { null, "NotNumber", "10.0fs"}) {
             field.put("radius", value);
             IllegalArgumentException e = expectThrows(IllegalArgumentException.class, () -> processor.execute(ingestDocument));
-            assertThat(e.getMessage(), equalTo("invalid circle definition"));
+            assertThat(e.getMessage(), equalTo("invalid shape definition"));
         }
     }
 
