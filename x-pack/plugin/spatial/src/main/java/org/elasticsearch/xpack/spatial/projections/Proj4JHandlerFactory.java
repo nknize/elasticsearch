@@ -35,8 +35,9 @@ public class Proj4JHandlerFactory implements CRSHandlerFactory {
             // test if name is a PROJ4 spec
             if (crsSpec.indexOf("+") >= 0 || crsSpec.indexOf("=") >= 0) {
                 crs = projCRSFactory.createFromParameters("Anon", crsSpec);
+            } else {
+                crs = projCRSFactory.createFromName(crsSpec);
             }
-            crs = projCRSFactory.createFromName(crsSpec);
         } catch (Exception e) {
             // yes; this is gross, but we currently don't have a registry
             // to verify if the CRS is actually supported by the factory
